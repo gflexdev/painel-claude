@@ -47,7 +47,25 @@ const SESSIONS = [
     prompt: 'Planeja a migração para Postgres 17', answer: 'Lendo as notas da versão.' },
   { id: 'demo-onboarding', title: 'Onboarding de clientes', cwd: '/Users/ana/site', model: 'claude-haiku-5-5', ctx: 23_400, turns: 2,
     prompt: 'Revisa os textos do onboarding', answer: 'Textos revisados.' },
+  { id: 'demo-painel', title: 'Painel de agentes', cwd: '/Users/ana/painel', model: 'claude-opus-5-5', ctx: 240_100, turns: 18,
+    prompt: 'Abre uma sessão para o widget do Mac', answer: 'Abri a sessão do widget e sigo com o servidor.' },
+  { id: 'demo-widget', title: 'Widget do Mac', cwd: '/Users/ana/painel', model: 'claude-opus-5-5', ctx: 88_000, turns: 3,
+    prompt: 'Cria o widget do macOS', answer: 'Compilando o widget.' },
 ];
+
+/** Vínculos de "sessão filha" como o app do Claude grava (só para a demonstração). */
+function writeAppLinks() {
+  const dir = join(DEMO, 'home', 'Library', 'Application Support', 'Claude', 'claude-code-sessions', 'conta', 'org');
+  mkdirSync(dir, { recursive: true });
+  const file = (id, parent) => writeFileSync(join(dir, `local_${id}.json`), JSON.stringify({
+    sessionId: `local_${id}`, cliSessionId: id,
+    ...(parent && { spawnedFrom: { sessionId: `local_${parent}`, sideSession: true }, startChain: { depth: 1 } }),
+  }));
+  file('demo-painel');
+  file('demo-widget', 'demo-painel');
+  file('demo-mobile', 'demo-painel');
+}
+writeAppLinks();
 
 function writeTranscript(s) {
   const path = join(PROJECTS, `${s.id}.jsonl`);
@@ -87,6 +105,15 @@ await event(byId['demo-testes'], 'PreToolUse', { tool_name: 'Bash', tool_input: 
 await event(byId['demo-mobile'], 'PreToolUse', { tool_name: 'Edit', tool_input: { file_path: '/Users/ana/app-mobile/src/telas/Login.tsx' } });
 await event(byId['demo-migracao'], 'PreToolUse', { tool_name: 'WebFetch', tool_input: { url: 'https://www.postgresql.org/docs/17/release-17.html' } });
 await event(byId['demo-docs'], 'Stop');
+await event(byId['demo-testes'], 'PreToolUse', { tool_name: 'Agent', tool_input: { subagent_type: 'test-runner', description: 'Roda os testes do carrinho' } });
+await event(byId['demo-testes'], 'SubagentStart', { agent_id: 'sub-1', agent_type: 'test-runner' });
+await event(byId['demo-testes'], 'PreToolUse', { agent_id: 'sub-1', agent_type: 'test-runner', tool_name: 'Bash', tool_input: { command: 'npm test', description: 'Roda os testes' } });
+await event(byId['demo-painel'], 'PreToolUse', { tool_name: 'Agent', tool_input: { subagent_type: 'Explore', description: 'Acha onde o estado é salvo' } });
+await event(byId['demo-painel'], 'SubagentStart', { agent_id: 'sub-2', agent_type: 'Explore' });
+await event(byId['demo-painel'], 'PreToolUse', { agent_id: 'sub-2', agent_type: 'Explore', tool_name: 'Read', tool_input: { file_path: '/Users/ana/painel/src/state.js' } });
+await event(byId['demo-painel'], 'PreToolUse', { tool_name: 'Agent', tool_input: { subagent_type: 'code-reviewer', description: 'Revisa o servidor' } });
+await event(byId['demo-painel'], 'SubagentStart', { agent_id: 'sub-3', agent_type: 'code-reviewer' });
+await event(byId['demo-painel'], 'SubagentStop', { agent_id: 'sub-3', agent_type: 'code-reviewer' });
 await event(byId['demo-onboarding'], 'Stop');
 await fetch(`${BASE}/api/sessions/demo-onboarding/seen`, { method: 'POST', headers: { Authorization: `Bearer ${TOKEN}` } });
 
@@ -99,6 +126,9 @@ await post('/usage', { rate_limits: {
 // Pedidos pendentes: ficam segurando a conexão até o fim das capturas.
 const hold = new AbortController();
 const pending = [
+  post('/permission', { hook_event_name: 'PermissionRequest', session_id: 'demo-widget', cwd: byId['demo-widget'].cwd,
+    transcript_path: byId['demo-widget'].path, tool_name: 'Bash',
+    tool_input: { command: 'xcodebuild -scheme Painel build', description: 'Compila o widget' } }, hold.signal),
   post('/permission', { hook_event_name: 'PermissionRequest', session_id: 'demo-deploy', cwd: byId['demo-deploy'].cwd,
     transcript_path: byId['demo-deploy'].path, tool_name: 'Bash',
     tool_input: { command: 'npm run build && npm run deploy -- --prod\n# publica em loja.exemplo.com.br', description: 'Publica o site em produção' } }, hold.signal),
@@ -111,7 +141,8 @@ const pending = [
         { label: 'Manter a atual', description: 'Só reorganizar o código, sem trocar a biblioteca' },
       ] }] } }, hold.signal),
 ].map((p) => p.catch(() => {}));
-await sleep(1500);
+// O painel relê os vínculos do app a cada 20 s.
+await sleep(22_000);
 
 const browser = await chromium.launch({ executablePath: CHROME, headless: true });
 const url = (hash = '') => `${BASE}/?t=${TOKEN}${hash}`;
@@ -136,7 +167,8 @@ async function shot(name, { width, height, scale, hash = '', style = 'robo', act
   console.log('ok', name);
 }
 
-await shot('painel.png', { width: 1280, height: 540, scale: 1.5 });
+await shot('painel.png', { width: 1280, height: 820, scale: 1.5 });
+await shot('celular-familia.png', { width: 390, height: 844, scale: 2, hash: '#sessao=demo-painel' });
 await shot('celular-permissao.png', { width: 390, height: 844, scale: 2, hash: '#sessao=demo-deploy' });
 await shot('celular-pergunta.png', { width: 390, height: 844, scale: 2, hash: '#sessao=demo-checkout', action: async (page) => {
   await page.getByText('Zod', { exact: true }).click();

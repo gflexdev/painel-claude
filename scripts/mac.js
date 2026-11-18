@@ -30,6 +30,8 @@ export function hookPlan(eventCommand, permissionCommand) {
     StopFailure: eventHook,
     PreCompact: eventHook,
     SessionEnd: eventHook,
+    SubagentStart: eventHook,
+    SubagentStop: eventHook,
   });
 }
 export const HOOK_PLAN = hookPlan(HOOK_SCRIPT, PERMISSION_SCRIPT);

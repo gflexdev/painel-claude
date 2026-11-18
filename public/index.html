@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="detail.css">
   <link rel="stylesheet" href="usage.css">
   <link rel="stylesheet" href="agents.css">
+  <link rel="stylesheet" href="families.css">
 </head>
 <body>
   <header class="topbar">
@@ -93,6 +94,15 @@
           <button id="req-allow" class="req-btn allow" type="button">Permitir</button>
         </div>
         <p id="req-feedback" class="req-feedback" role="status"></p>
+      </section>
+
+      <section id="detail-agents" class="detail-block" hidden>
+        <h3>Subagentes</h3>
+        <ul id="detail-agents-list" class="agent-list"></ul>
+      </section>
+      <section id="detail-links" class="detail-block" hidden>
+        <h3>Sessões ligadas</h3>
+        <ul id="detail-links-list" class="link-list"></ul>
       </section>
 
       <section class="detail-block">

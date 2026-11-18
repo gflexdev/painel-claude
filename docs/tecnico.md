@@ -30,7 +30,7 @@ Sessões do Claude Code ──hooks──▶ servidor no Mac (127.0.0.1:7777) �
 O instalador acrescenta em `~/.claude/settings.json`:
 
 - `hooks/enviar-evento.sh` em SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Notification, Stop,
-  StopFailure, PreCompact e SessionEnd. Faz um `curl` para `POST /hook` com timeout de 1 s e sai sempre com 0:
+  StopFailure, PreCompact, SessionEnd, SubagentStart e SubagentStop. Faz um `curl` para `POST /hook` com timeout de 1 s e sai sempre com 0:
   com o servidor fora do ar, o Claude não percebe.
 - `hooks/permissao.sh` em PermissionRequest (timeout de 600 s). Veja abaixo.
 - `hooks/statusline.sh` como status line. Repassa o JSON a `hooks/enviar-uso.sh` (no máximo uma vez por minuto,
@@ -55,6 +55,28 @@ O mesmo cartão serve para:
 - **Pergunta** (AskUserQuestion): o painel devolve `updatedInput` com a pergunta original mais `answers`, que o
   Claude Code valida.
 - **Plano** (ExitPlanMode): aprovar é `allow`; recusar é `deny`.
+
+## Subagentes
+
+Quando a sessão usa a ferramenta Agent, chegam `SubagentStart` e `SubagentStop` com `agent_id` e `agent_type`, e
+toda ferramenta usada dentro do subagente (PreToolUse, PostToolUse, PermissionRequest) vem com o mesmo
+`agent_id`. `src/subagents.js` guarda os 8 mais recentes por sessão. A descrição vem do `tool_input.description`
+da chamada à ferramenta Agent que precedeu o `SubagentStart` do mesmo tipo. A sessão mãe fica "delegando" e o
+detalhe diz qual subagente está fazendo o quê. Um pedido de permissão de subagente leva `agentType`.
+
+## Sessões filhas (app do Claude)
+
+O app do Claude no Mac guarda um arquivo por sessão em
+`~/Library/Application Support/Claude/claude-code-sessions/<conta>/<org>/local_<id>.json`. `src/app-links.js` lê
+dali só `cliSessionId` (o id dos hooks), `priorCliSessionIds`, `spawnedFrom.sessionId` e `startChain.depth`, e só
+dos arquivos mexidos nas últimas 24 h (mais o arquivo da mãe, se for mais antigo). Relê a cada 20 s, só o que
+mudou. Não é formato documentado: se mudar, o painel só deixa de agrupar. A pasta pode ser trocada com
+`PAINEL_CLAUDE_APP_DIR`.
+
+O app também guarda amostras do uso do plano em `plan-usage-history.json` (`{ t, u: { sd, fh } }`, % da semana
+e das 5 h). `src/app-usage.js` lê a mais nova; ela só vale se for mais nova que o último dado da status line. O
+horário do reset vem do último conhecido pela status line, empurrado de 7 em 7 dias (`nextReset`). Sem nenhum,
+o snapshot leva `resetsAt: null` e a tela mostra só o %. Arquivo: `PAINEL_CLAUDE_APP_USAGE`.
 
 ## API
 
@@ -85,7 +107,13 @@ Item de `sessions` (enxuto de propósito, para caber num ESP32):
 - `stale: true` quer dizer que a sessão está marcada como rodando, mas sem nenhum evento há 15 min.
   Provavelmente foi fechada sem `SessionEnd`.
 - Com pedido pendente, o item ganha `permission: { id, kind, tool, count }`.
-- `usage` é `{ fiveHour?, sevenDay?: { usedPercentage, resetsAt }, updatedAt }`, com os horários em ms. O cálculo
+- `subagentCount` (subagentes ativos) e `subagents` (até 4: `{ id, type, description, status, detail, activity }`).
+  O detalhe (`GET /api/sessions/:id`) traz `subagentsRecent` com os ativos e os que terminaram.
+- Sessão aberta por outra no app do Claude ganha `parentId` (id da mãe) e `depth`. A família se monta na tela
+  (`public/families.js`).
+- `permission.agentType` vem preenchido quando o pedido é de um subagente.
+- `usage` é `{ fiveHour?, sevenDay?: { usedPercentage, resetsAt }, updatedAt, source }`, com os horários em ms;
+  `source` é `statusline` ou `app`, e `resetsAt` pode ser `null` quando o reset ainda não é conhecido. O cálculo
   do ritmo fica em `public/pace.js`, puro, para o widget e o ESP32 usarem a mesma conta.
 
 O HTML leva a versão dos arquivos de `public/` (um hash), e cada snapshot também. Quando as duas diferem, a página

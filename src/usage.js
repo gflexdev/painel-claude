@@ -24,6 +24,16 @@ export function parseRateLimits(payload) {
   return windows.length ? Object.fromEntries(windows) : null;
 }
 
+const WEEK_MS = 7 * 24 * 60 * 60_000;
+const clampPercent = (value) => Math.min(100, Math.max(0, value));
+
+/** Último reset conhecido, empurrado de período em período até ficar no futuro; null se nunca soube. */
+export function nextReset(resetsAt, periodMs, now) {
+  if (!Number.isFinite(resetsAt)) return null;
+  if (resetsAt > now) return resetsAt;
+  return resetsAt + Math.ceil((now - resetsAt) / periodMs) * periodMs;
+}
+
 const sameWindow = (a, b) => a?.usedPercentage === b?.usedPercentage && a?.resetsAt === b?.resetsAt;
 
 function readSaved(file, onError) {
@@ -55,7 +65,28 @@ export function createUsage({ file, onChange, onError, now = Date.now }) {
       if (!parsed) return false;
       const changed = Object.entries(parsed).some(([key, value]) => !sameWindow(current?.[key], value));
       if (!changed) return false;
-      current = { ...current, ...parsed, updatedAt: now() };
+      current = { ...current, ...parsed, updatedAt: now(), source: 'statusline' };
+      save();
+      onChange?.();
+      return true;
+    },
+    /**
+     * Amostra do app do Claude ({ t, sd, fh }: % da semana e das 5 h, sem horário de reset). Só vale se for mais
+     * nova que o último dado; o reset vem do último conhecido pela status line, empurrado de 7 em 7 dias.
+     */
+    updateFromApp(sample) {
+      if (!sample || !Number.isFinite(sample.t) || sample.t <= (current?.updatedAt ?? 0)) return false;
+      const t = now();
+      const windows = {};
+      if (Number.isFinite(sample.sd)) {
+        windows.sevenDay = { usedPercentage: clampPercent(sample.sd), resetsAt: nextReset(current?.sevenDay?.resetsAt, WEEK_MS, t) };
+      }
+      const fiveReset = current?.fiveHour?.resetsAt;
+      if (Number.isFinite(sample.fh) && fiveReset && fiveReset > t) {
+        windows.fiveHour = { usedPercentage: clampPercent(sample.fh), resetsAt: fiveReset };
+      }
+      if (!Object.keys(windows).length) return false;
+      current = { ...current, ...windows, updatedAt: sample.t, source: 'app' };
       save();
       onChange?.();
       return true;

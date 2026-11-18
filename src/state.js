@@ -1,5 +1,8 @@
 import { basename } from 'node:path';
 import { activityOf, clip, describeTool } from './tools.js';
+import { activeSubagents, parentPatchFromAgent, subagentPatch, subagentView } from './subagents.js';
+
+const MAX_SUBAGENTS_IN_VIEW = 4;
 
 export const STATUS = Object.freeze({
   WORKING: 'working',
@@ -127,7 +130,7 @@ export function applyEvent(sessions, event, now, machine = null) {
   if (typeof id !== 'string' || !id) return sessions;
   const previous = sessions[id];
   if (previous && machineOf(previous) !== machine) return sessions;
-  const patch = transition(previous, event);
+  const patch = parentPatchFromAgent(previous, event) ?? transition(previous, event);
   if (patch === null) return sessions;
 
   const base = previous ?? {
@@ -145,6 +148,7 @@ export function applyEvent(sessions, event, now, machine = null) {
   const next = {
     ...base,
     ...patch,
+    ...subagentPatch(base, event, now),
     cwd,
     project: cwd ? projectOf(cwd) : base.project,
     // O transcript de outra máquina fica lá; o resumo chega por /remote/transcript.
@@ -204,6 +208,8 @@ export function toView(sessions, now) {
       since: s.statusSince,
       lastEventAt: s.lastEventAt,
       stale: s.status === STATUS.WORKING && now - s.lastEventAt > STALE_WORKING_MS,
+      subagentCount: activeSubagents(s).length,
+      subagents: activeSubagents(s).slice(0, MAX_SUBAGENTS_IN_VIEW).map(subagentView),
     }))
     .sort((a, b) => rankOf(a) - rankOf(b) || b.lastEventAt - a.lastEventAt);
 }

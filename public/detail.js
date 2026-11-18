@@ -2,6 +2,7 @@
 import { agentSvg } from './agents.js';
 import { ACTIVITY_WORD, STATUS_WORD, accessoryOf, el, elapsed, tokens } from './format.js';
 import { renderMarkdown } from './markdown.js';
+import { fillAgents, fillLinks } from './detail-links.js';
 
 const REFRESH_AFTER_DECISION_MS = 1500;
 const REQUEST_COPY = Object.freeze({
@@ -12,7 +13,7 @@ const REQUEST_COPY = Object.freeze({
 
 const $ = (id) => document.getElementById(id);
 
-export function createDetail({ api, serverNow, agentStyle = () => 'robo' }) {
+export function createDetail({ api, serverNow, agentStyle = () => 'robo', sessions = () => [] }) {
   const dialog = $('detail');
   let openId = null;
   let shown = null;
@@ -118,7 +119,7 @@ export function createDetail({ api, serverNow, agentStyle = () => 'robo' }) {
     picks = {};
     const copy = REQUEST_COPY[request.kind] ?? REQUEST_COPY.permission;
     section.dataset.kind = request.kind;
-    $('req-title').textContent = copy.title;
+    $('req-title').textContent = request.agentType ? `${copy.title} · do subagente ◇ ${request.agentType}` : copy.title;
     $('req-tool').textContent = request.kind === 'question' ? '' : request.tool;
     const preview = $('req-preview');
     preview.hidden = !request.preview;
@@ -147,6 +148,8 @@ export function createDetail({ api, serverNow, agentStyle = () => 'robo' }) {
       fillStats(data);
       fillSummary(data);
       fillRequest(data.permissions?.[0] ?? null);
+      fillAgents($('detail-agents'), $('detail-agents-list'), data.subagentsRecent);
+      fillLinks($('detail-links'), $('detail-links-list'), data, sessions(), open);
     } catch (error) {
       $('detail-answer').textContent = `não consegui ler o resumo (${error.message})`;
       $('detail-answer').classList.remove('md');

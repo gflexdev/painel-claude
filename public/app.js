@@ -4,6 +4,8 @@ import { createApi, readToken, saveToken } from './api.js';
 import { createDetail } from './detail.js';
 import { renderUsage } from './usage-bar.js';
 import { createStylePicker } from './style-picker.js';
+import { groupFamilies } from './families.js';
+import { createFamilyBlock, subagentChips } from './family-view.js';
 import { ACTIVITY_WORD, STATUS_WORD, accessoryOf, el, elapsed, sessionFromHash, tokens } from './format.js';
 
 const TICK_MS = 1000;
@@ -26,6 +28,7 @@ let clockOffset = 0;
 let lastContactAt = null;
 let online = false;
 const tiles = new Map();
+const families = new Map();
 
 const serverNow = () => Date.now() + clockOffset;
 const PAGE_VERSION = document.querySelector('meta[name="painel-version"]')?.content ?? '';
@@ -52,29 +55,32 @@ const picker = createStylePicker({
     detail.onSnapshot(snapshot);
   },
 });
-const detail = createDetail({ api, serverNow, agentStyle: () => picker.current() });
+const detail = createDetail({ api, serverNow, agentStyle: () => picker.current(), sessions: () => snapshot.sessions });
 
 function createTile(session) {
   const button = el('button', 'tile');
   button.type = 'button';
   const bot = el('div', 'bot');
+  const lineage = el('span', 'lineage');
   const name = el('h2', 'name');
   const project = el('div', 'project');
   const detailLine = el('div', 'detail-line');
+  const agents = el('ul', 'agent-chips');
   const statusLine = el('div', 'status-line');
   const word = el('span', 'status-word');
   const time = el('span', 'elapsed');
   statusLine.append(word, time);
-  button.append(bot, name, project, detailLine, statusLine);
+  button.append(bot, lineage, name, project, detailLine, agents, statusLine);
   button.addEventListener('click', () => {
     const current = snapshot.sessions.find((s) => s.id === session.id);
     detail.open(session.id, current);
   });
-  return { button, bot, name, project, detail: detailLine, word, time, botKey: '' };
+  return { button, bot, lineage, name, project, detail: detailLine, agents, word, time, botKey: '' };
 }
 
 function statusWord(session) {
   if (session.permission) {
+    if (session.permission.agentType) return `aprovar? · ◇ ${session.permission.agentType}`;
     const verb = session.permission.kind === 'question' ? 'responder' : session.permission.kind === 'plan' ? 'aprovar plano' : 'aprovar?';
     return session.permission.count > 1 ? `${verb} (${session.permission.count})` : verb;
   }
@@ -101,23 +107,56 @@ function updateTile(tile, session) {
   tile.project.replaceChildren(...(session.machine ? [el('span', 'machine', session.machine), ' '] : []), projectText);
   tile.button.toggleAttribute('data-remote', Boolean(session.machine));
   tile.detail.textContent = session.stale ? `sem sinal há ${elapsed(session.lastEventAt, serverNow())}` : session.detail;
+  // Sessão aberta por outra no app do Claude (fica dentro do bloco da família, ou solta se a mãe sumiu).
+  tile.lineage.textContent = session.parentId ? `${'↳'.repeat(Math.min(session.depth ?? 1, 3))} sessão filha` : '';
+  tile.lineage.hidden = !session.parentId;
+  tile.button.toggleAttribute('data-child', Boolean(session.parentId));
+  tile.agents.replaceChildren(...subagentChips(session, ACTIVITY_WORD));
+  tile.agents.hidden = !tile.agents.children.length;
   tile.word.textContent = statusWord(session);
   tile.time.textContent = elapsed(session.since, serverNow());
   tile.button.setAttribute('aria-label', `${session.name}: ${tile.word.textContent}, ${session.detail}`);
 }
 
+function tileFor(session, seen) {
+  seen.add(session.id);
+  const tile = tiles.get(session.id) ?? createTile(session);
+  tiles.set(session.id, tile);
+  updateTile(tile, session);
+  return tile;
+}
+
+/** Põe `node` na posição `index` de `parent`, mexendo no DOM só se precisar. */
+function placeAt(parent, node, index) {
+  if (parent.children[index] !== node) parent.insertBefore(node, parent.children[index] ?? null);
+}
+
 function renderGrid() {
   const seen = new Set();
-  snapshot.sessions.forEach((session, index) => {
-    seen.add(session.id);
-    const tile = tiles.get(session.id) ?? createTile(session);
-    tiles.set(session.id, tile);
-    updateTile(tile, session);
-    if (ui.grid.children[index] !== tile.button) ui.grid.insertBefore(tile.button, ui.grid.children[index] ?? null);
+  const seenFamilies = new Set();
+  groupFamilies(snapshot.sessions).forEach((item, index) => {
+    if (item.kind === 'single') {
+      placeAt(ui.grid, tileFor(item.session, seen).button, index);
+      return;
+    }
+    seenFamilies.add(item.id);
+    const block = families.get(item.id) ?? createFamilyBlock(item.id, renderGrid);
+    families.set(item.id, block);
+    const isCollapsed = block.update(item.members);
+    item.members.forEach(({ session, level }, position) => {
+      const tile = tileFor(session, seen);
+      tile.button.hidden = isCollapsed && level > 0;
+      placeAt(block.body, tile.button, position);
+    });
+    placeAt(ui.grid, block.section, index);
   });
   [...tiles.keys()].filter((id) => !seen.has(id)).forEach((id) => {
     tiles.get(id).button.remove();
     tiles.delete(id);
+  });
+  [...families.keys()].filter((id) => !seenFamilies.has(id)).forEach((id) => {
+    families.get(id).section.remove();
+    families.delete(id);
   });
   ui.empty.hidden = snapshot.sessions.length > 0;
   renderCounters();

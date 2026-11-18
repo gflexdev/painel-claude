@@ -83,3 +83,41 @@ test('paceOf: perto do ideal é "no ritmo"; começo da janela é "early"; passou
   assert.equal(paceOf({ usedPercentage: 90, resetsAt: now - 1 }, WINDOWS.fiveHour, now).state, 'reset');
   assert.equal(paceOf({ usedPercentage: 100, resetsAt: now + HOUR }, WINDOWS.fiveHour, now).state, 'limit');
 });
+
+test('nextReset: empurra o reset conhecido de semana em semana até o futuro', async () => {
+  const { nextReset } = await import('../src/usage.js');
+  const WEEK = 7 * 86_400_000;
+  assert.equal(nextReset(5_000, WEEK, 1_000), 5_000);
+  assert.equal(nextReset(1_000, WEEK, 1_000 + WEEK + 10), 1_000 + 2 * WEEK);
+  assert.equal(nextReset(undefined, WEEK, 1), null);
+});
+
+test('updateFromApp: usa a amostra mais nova, com o reset empurrado; ignora amostra velha', () => {
+  const file = join(mkdtempSync(join(tmpdir(), 'painel-uso-')), 'uso.json');
+  const WEEK = 7 * DAY;
+  const base = 1_795_000_000_000;
+  let clock = base;
+  const usage = createUsage({ file, onChange: () => {}, now: () => clock });
+  // A status line contou um reset que já passou (há 1 dia).
+  assert.equal(usage.update({ rate_limits: { seven_day: { used_percentage: 40, resets_at: (base - DAY) / 1000 } } }), true);
+  assert.equal(usage.updateFromApp({ t: base - 1, sd: 50 }), false, 'mais velha que a status line');
+  clock = base + 1000;
+  assert.equal(usage.updateFromApp({ t: clock, sd: 81, fh: 30 }), true);
+  const view = usage.view();
+  assert.equal(view.sevenDay.usedPercentage, 81);
+  assert.equal(view.sevenDay.resetsAt, base - DAY + WEEK);
+  assert.equal(view.fiveHour, undefined, 'sem reset conhecido das 5 h, não inventa');
+  assert.equal(view.source, 'app');
+});
+
+test('latestSample: pega a amostra mais nova válida', async () => {
+  const { latestSample } = await import('../src/app-usage.js');
+  assert.deepEqual(latestSample({ samples: [{ t: 1, u: { sd: 10 } }, { t: 3, u: { sd: 30, fh: 5 } }, { t: 2, u: {} }] }), { t: 3, sd: 30, fh: 5 });
+  assert.equal(latestSample({}), null);
+});
+
+test('paceOf: sem reset conhecido fica "unknown" e não inventa ritmo', () => {
+  const pace = paceOf({ usedPercentage: 81, resetsAt: null }, WINDOWS.sevenDay, 1_000);
+  assert.equal(pace.state, 'unknown');
+  assert.equal(pace.ideal, null);
+});

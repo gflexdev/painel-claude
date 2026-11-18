@@ -21,6 +21,9 @@ const ON_PACE_MAX = 105;
  * @param {number} now agora, em ms
  */
 export function paceOf({ usedPercentage: used, resetsAt }, spec, now) {
+  if (!Number.isFinite(resetsAt)) {
+    return { used, resetsAt: null, remaining: null, ideal: null, projected: null, exhaustsAt: null, neededPerUnit: null, currentPerUnit: null, state: 'unknown' };
+  }
   const remaining = resetsAt - now;
   const elapsed = Math.min(spec.ms, Math.max(0, spec.ms - remaining));
   const fraction = elapsed / spec.ms;

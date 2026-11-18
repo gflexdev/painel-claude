@@ -39,8 +39,8 @@ export function hookOutput(decision) {
 }
 
 /** O que vai para a tela (sem o tool_input original, que fica só no servidor). */
-const publicView = ({ id, kind, tool, toolName, preview, questions, createdAt }) => (
-  { id, kind, tool, toolName, preview, questions, createdAt }
+const publicView = ({ id, kind, tool, toolName, preview, questions, createdAt, agentType }) => (
+  { id, kind, tool, toolName, preview, questions, createdAt, agentType }
 );
 
 /**
@@ -78,6 +78,8 @@ export function createPermissions({ timeoutMs, onChange }) {
           preview: previewInput(toolName, event.tool_input),
           questions: kind === 'question' ? questionsOf(event.tool_input) : undefined,
           createdAt: Date.now(),
+          // Pedido feito de dentro de um subagente: a tela diz qual.
+          agentType: event.agent_id ? String(event.agent_type || 'subagente') : null,
           timer,
           resolve,
         });

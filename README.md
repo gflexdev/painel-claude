@@ -15,7 +15,7 @@ computador.
   <tr>
     <td align="center"><img src="docs/imagens/celular-permissao.png" alt="Pedido de permissão aberto no celular, com os botões Negar e Permitir" width="240"><br><sub>Aprovar um comando pelo celular</sub></td>
     <td align="center"><img src="docs/imagens/celular-pergunta.png" alt="Pergunta do Claude com as opções como botões" width="240"><br><sub>Responder uma pergunta do Claude</sub></td>
-    <td align="center"><img src="docs/imagens/celular-resposta.png" alt="Detalhe da sessão com a última resposta em markdown formatado" width="240"><br><sub>Ver a última resposta, formatada</sub></td>
+    <td align="center"><img src="docs/imagens/celular-familia.png" alt="Detalhe de uma sessão com a lista de subagentes e as sessões que ela abriu" width="240"><br><sub>Subagentes e sessões ligadas</sub></td>
   </tr>
 </table>
 
@@ -32,12 +32,18 @@ computador.
 - Saber o que cada uma está fazendo agora: lendo, editando, rodando comando, na web, delegando, planejando,
   perguntando ou pensando.
 - Ver os contadores no topo: quantas esperam você, quantas terminaram e você ainda não viu, quantas estão rodando.
+- **Subagentes:** quando uma sessão chama ajudantes (a ferramenta Agent), cada um aparece no tile como uma etiqueta
+  `◇ tipo · o que está fazendo`. Se o pedido de permissão vier de um subagente, o painel diz qual.
+- **Famílias:** uma sessão que abriu outras no app do Claude fica num bloco junto com as filhas. O bloco sobe
+  quando qualquer uma delas precisa de você e pode ser recolhido num tile só.
 
 **Acompanhar**
 
 - Tocar numa sessão e ver o último pedido, a última resposta (com o markdown formatado) e as ferramentas usadas
   por último.
 - Ver o tamanho do contexto em tokens, o modelo, quantos pedidos você fez e há quanto tempo ela está aberta.
+- Ver no detalhe os subagentes (os ativos e os que já terminaram) e as sessões ligadas: quem abriu esta e quem
+  ela abriu, cada uma com um toque para abrir.
 - Acompanhar o **uso do plano** (limite de 5 h e da semana), com uma linha de ritmo: dá para usar mais, você está
   no ritmo ou vai acabar antes do reset.
 
@@ -158,6 +164,9 @@ O Tailscale cria uma rede privada entre os seus aparelhos. O painel continua vis
   botões. Depois de responder, o Claude segue na hora.
 - **Barra de uso, no topo:** o risco branco marca onde você deveria estar agora para gastar 100% até o reset. A
   frase embaixo diz o que fazer: usar mais (azul), manter (verde) ou segurar (vermelho).
+- **Família:** o bloco com borda junta a sessão e as que ela abriu (cada filha tem "↳ sessão filha" em cima do
+  nome). O botão "recolher" deixa só a sessão de cima, com um aviso se alguma filha espera você.
+- **◇ Subagentes:** etiquetas no tile; a vermelha é a de um subagente pedindo permissão.
 - **Estilo do personagem:** o botão com o bonequinho, ao lado do relógio.
 - **Mac fora do ar:** uma faixa vermelha no topo diz há quanto tempo o painel não tem notícia do Mac.
 
@@ -202,10 +211,15 @@ Não. O painel roda como serviço, sobe sozinho quando o Mac liga e se reinicia 
 Sim. Os hooks ficam no `~/.claude/settings.json`, que vale para todo lugar onde o Claude Code roda com o seu
 usuário. O tile mostra de onde veio a sessão.
 
-**A barra de uso do plano não atualiza.**
-O uso chega pela status line do Claude Code, e ela só roda nas sessões **de terminal**. Se você só usa o app do
-Claude, o número fica parado, e o painel avisa há quanto tempo foi a última leitura. Abrir qualquer sessão no
-terminal (`claude`) já atualiza.
+**De onde vem o uso do plano?**
+De dois lugares, e vale o mais novo. As sessões de terminal mandam o uso pela status line, com o dia e a hora do
+reset. O app do Claude guarda o % da semana num arquivo próprio, e o painel lê esse arquivo a cada 20 s. O app não
+guarda o horário do reset, então o painel usa o último que aprendeu pela status line. Se nunca abriu uma sessão de
+terminal, a barra mostra só o %, sem o ritmo; abrir `claude` no terminal uma vez resolve.
+
+**Por que algumas sessões não aparecem como família?**
+O vínculo de "sessão filha" vem do app do Claude no Mac. Sessões abertas no terminal ou na VPS não guardam quem as
+abriu, então aparecem soltas. Se a sessão mãe já saiu do painel, a filha aparece solta com "↳ sessão filha".
 
 **Uma sessão não aparece.**
 As sessões que já estavam abertas antes da instalação aparecem no próximo pedido que você fizer nelas. Se não
@@ -263,7 +277,7 @@ Como funciona e as regras de segurança: [docs/tecnico.md](docs/tecnico.md#sess�
 - **Linux:** instalador com systemd no lugar do launchd.
 - **Windows:** hooks em PowerShell e instalador próprio.
 - **Estilos de personagem também no widget e no ESP32.**
-- **Uso do plano sem depender da status line**, para atualizar mesmo quando você só usa o app do Claude.
+- **Subagentes e famílias também no widget e no ESP32.**
 
 ## Licença
 

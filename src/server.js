@@ -5,9 +5,12 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadConfig, STATE_FILE, EVENTS_LOG, USAGE_FILE } from './config.js';
 import { createUsage } from './usage.js';
+import { createAppLinks } from './app-links.js';
+import { createAppUsage } from './app-usage.js';
 import { createStore } from './store.js';
 import { readSummary } from './transcript.js';
 import { toView } from './state.js';
+import { recentSubagents, subagentView } from './subagents.js';
 import { createPermissions } from './permissions.js';
 import { assetVersion, VERSION_PLACEHOLDER } from './assets.js';
 import { isLocalHook } from './network.js';
@@ -39,24 +42,35 @@ const PERMISSION_WAIT_MS = 570_000;
 const config = loadConfig();
 const logError = (context, error) => process.stderr.write(`[painel] ${context}: ${error?.message ?? error}\n`);
 
+/** Sessão aberta por outra no app do Claude: leva o id da sessão mãe e a profundidade. */
+const withParent = (session) => {
+  const link = session.machine ? null : appLinks.linkOf(session.id);
+  return link && link.parentId !== session.id ? { ...session, parentId: link.parentId, depth: link.depth } : session;
+};
+
 /** Na grade vai só o essencial do pedido de permissão; o comando inteiro fica no detalhe. */
 const withPermission = (session) => {
   const [first, ...rest] = permissions.forSession(session.id);
   return first
-    ? { ...session, permission: { id: first.id, kind: first.kind, tool: first.tool, count: rest.length + 1 } }
+    ? { ...session, permission: { id: first.id, kind: first.kind, tool: first.tool, count: rest.length + 1, agentType: first.agentType } }
     : session;
 };
+const decorate = (session) => withPermission(withParent(session));
 const ASSET_VERSION = assetVersion(PUBLIC_DIR);
 const store = createStore({
   stateFile: STATE_FILE,
   eventsLog: EVENTS_LOG,
   debug: config.debug,
   onError: logError,
-  decorate: withPermission,
+  decorate,
   version: ASSET_VERSION,
   extras: () => ({ usage: usage.view() }),
 });
 const usage = createUsage({ file: USAGE_FILE, onChange: () => store.notify(), onError: logError });
+const appLinks = createAppLinks({ onChange: () => store.notify(), onError: logError });
+const appUsage = createAppUsage({ onSample: (sample) => usage.updateFromApp(sample), onError: logError });
+/** O app do Claude grava os vínculos e o uso em arquivos próprios; relê de tempos em tempos (só o que mudou). */
+const APP_REFRESH_MS = 20_000;
 const permissions = createPermissions({ timeoutMs: PERMISSION_WAIT_MS, onChange: () => store.notify() });
 const expectedToken = Buffer.from(config.token);
 const remoteGate = createRemoteGate(config.remotes);
@@ -165,7 +179,7 @@ async function handleDetail(res, id) {
   } catch (error) {
     if (error.code !== 'ENOENT') logError('resumo', error);
   }
-  const [view] = toView({ [id]: session }, Date.now());
+  const [view] = toView({ [id]: session }, Date.now()).map(withParent);
   return sendJson(res, 200, {
     success: true,
     data: {
@@ -174,6 +188,7 @@ async function handleDetail(res, id) {
       lastPrompt: session.lastPrompt,
       startedAt: session.startedAt,
       permissions: permissions.forSession(id),
+      subagentsRecent: recentSubagents(session).map(subagentView),
       summary,
     },
   });
@@ -232,6 +247,9 @@ const server = createServer((req, res) => {
 });
 
 setInterval(() => store.tick(), PRUNE_EVERY_MS).unref();
+const refreshApp = () => Promise.all([appLinks.refresh(), appUsage.refresh()]);
+refreshApp();
+setInterval(refreshApp, APP_REFRESH_MS).unref();
 
 const shutdown = () => {
   store.flush();

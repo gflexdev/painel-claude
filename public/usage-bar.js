@@ -5,6 +5,8 @@ import { WINDOWS, paceOf } from './pace.js';
 
 /** Dado mais velho que isso ganha o aviso "atualizado há …" (a status line só roda com sessão aberta). */
 const STALE_MS = 30 * 60_000;
+/** O app do Claude grava amostras de poucas em poucas horas. */
+const APP_STALE_MS = 3 * 60 * 60_000;
 const WEEKDAY = new Intl.DateTimeFormat('pt-BR', { weekday: 'short' });
 const HOUR_MINUTE = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
@@ -29,6 +31,7 @@ export function adviceOf(pace, spec, now) {
   switch (pace.state) {
     case 'limit': return `limite atingido · volta ${whenLabel(pace.resetsAt, now)}`;
     case 'reset': return 'já zerou · esperando o próximo dado';
+    case 'unknown': return 'sem o dia do reset ainda · abra uma sessão no terminal uma vez para o painel aprender';
     case 'early': return `começo da janela · dá para usar ~${rate(pace.neededPerUnit, spec.unit)}`;
     case 'over': return `nesse ritmo acaba ${whenLabel(pace.exhaustsAt, now)}, ${untilLabel(pace.exhaustsAt, pace.resetsAt)} antes de zerar · segure em ~${rate(pace.neededPerUnit, spec.unit)} (agora ${rate(pace.currentPerUnit, spec.unit)})`;
     case 'on': return `no ritmo para fechar perto de 100% (~${pct(pace.projected)})`;
@@ -41,11 +44,12 @@ function renderRow(spec, window, now) {
   const fill = el('span', 'usage-fill');
   fill.style.setProperty('--used', `${pace.used}%`);
   const ideal = el('span', 'usage-ideal');
-  ideal.style.setProperty('--ideal', `${Math.min(100, pace.ideal)}%`);
+  ideal.style.setProperty('--ideal', `${Math.min(100, pace.ideal ?? 0)}%`);
+  ideal.hidden = pace.ideal === null;
   ideal.title = 'Onde você estaria agora para fechar em 100% no reset';
   const track = el('span', 'usage-track');
   track.append(fill, ideal);
-  const reset = pace.state === 'reset' ? '' : `zera ${whenLabel(pace.resetsAt, now)} · em ${untilLabel(now, pace.resetsAt)}`;
+  const reset = pace.state === 'reset' || pace.state === 'unknown' ? '' : `zera ${whenLabel(pace.resetsAt, now)} · em ${untilLabel(now, pace.resetsAt)}`;
   const row = el('li', 'usage-row');
   row.dataset.state = pace.state;
   row.append(
@@ -66,8 +70,11 @@ export function renderUsage(container, usage, now) {
   container.hidden = rows.length === 0;
   const list = el('ul', 'usage-list');
   list.append(...rows);
-  const stale = usage?.updatedAt && now - usage.updatedAt > STALE_MS
-    ? [el('p', 'usage-stale', `uso atualizado há ${elapsed(usage.updatedAt, now)} (vem da status line de uma sessão aberta)`)]
+  const fromApp = usage?.source === 'app';
+  const staleAfter = fromApp ? APP_STALE_MS : STALE_MS;
+  const origin = fromApp ? 'vem do app do Claude' : 'vem da status line de uma sessão aberta';
+  const stale = usage?.updatedAt && now - usage.updatedAt > staleAfter
+    ? [el('p', 'usage-stale', `uso atualizado há ${elapsed(usage.updatedAt, now)} (${origin})`)]
     : [];
   container.replaceChildren(list, ...stale);
 }
