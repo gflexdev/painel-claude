@@ -23,7 +23,8 @@ computador.
   </tr>
 </table>
 
-> **Versão 0.1:** primeira versão para amigos. Funciona só no **macOS** por enquanto (veja [Futuro](#futuro)).
+> **Versão 0.2:** subagentes, famílias de sessões e uso semanal pelo app do Claude. Funciona só no **macOS** por
+> enquanto (veja [Futuro](#futuro)). Baixe a última versão em [Releases](https://github.com/gflexdev/painel-claude/releases/latest).
 
 ## O que dá para fazer
 
