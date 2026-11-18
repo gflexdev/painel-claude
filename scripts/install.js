@@ -1,7 +1,9 @@
 // Instala o painel no Mac: hooks do Claude Code + serviço launchd sempre ligado.
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { loadConfig, DATA_DIR } from '../src/config.js';
+import { execFileSync } from 'node:child_process';
+import { loadConfig, DATA_DIR, rememberClaudeBin } from '../src/config.js';
+import { findClaude } from '../src/usage-probe.js';
 import {
   HOOK_SCRIPT, PERMISSION_SCRIPT, LABEL, PLIST_FILE, ROOT, SETTINGS_FILE,
   plistXml, reachableAddresses, readSettings, startService, withPainelHooks, writeSettings,
@@ -12,6 +14,21 @@ const out = (line = '') => process.stdout.write(`${line}\n`);
 const uid = process.getuid();
 
 const config = loadConfig();
+
+/** O `claude` do PATH de quem está instalando; o serviço usa esse caminho para ler o /usage. */
+function claudeOnPath() {
+  try {
+    const path = execFileSync('/usr/bin/which', ['claude'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    return path || null;
+  } catch {
+    return null;
+  }
+}
+const claudeBin = findClaude(claudeOnPath());
+rememberClaudeBin(claudeBin);
+out(claudeBin
+  ? `✔ uso do plano pelo /usage do claude (${claudeBin})`
+  : '• não achei o comando claude: o uso do plano vem só da status line e do app do Claude. Instale o Claude Code no terminal e rode este instalador de novo.');
 chmodSync(HOOK_SCRIPT, 0o755);
 chmodSync(PERMISSION_SCRIPT, 0o755);
 

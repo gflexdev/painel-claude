@@ -221,10 +221,15 @@ Sim. Os hooks ficam no `~/.claude/settings.json`, que vale para todo lugar onde 
 usuário. O tile mostra de onde veio a sessão.
 
 **De onde vem o uso do plano?**
-De dois lugares, e vale o mais novo. As sessões de terminal mandam o uso pela status line, com o dia e a hora do
-reset. O app do Claude guarda o % da semana num arquivo próprio, e o painel lê esse arquivo a cada 20 s. O app não
-guarda o horário do reset, então o painel usa o último que aprendeu pela status line. Se nunca abriu uma sessão de
-terminal, a barra mostra só o %, sem o ritmo; abrir `claude` no terminal uma vez resolve.
+Do próprio Claude Code. A cada 5 min (com sessão rodando; parado, a cada 30), o painel roda o seu `claude` com o
+comando `/usage` em modo não interativo, como se você digitasse `/usage`. Vêm os mesmos números da tela de Usage,
+com o horário do reset e o limite por modelo. Não gasta nada do plano (0 tokens), e o painel nunca lê o seu login:
+quem pergunta à Anthropic é o Claude Code instalado. Precisa do `claude` instalado no terminal e com login feito;
+o instalador guarda onde ele está e avisa se não achar.
+
+Entre uma consulta e outra, a status line das sessões de terminal atualiza na hora. Sem o `claude`, o painel usa
+o % que o app do Claude guarda (atualiza poucas vezes por dia). Por regra da Anthropic, o painel não usa o token
+do Keychain, os cookies do navegador nem pede o seu login.
 
 **Por que algumas sessões não aparecem como família?**
 O vínculo de "sessão filha" vem do app do Claude no Mac. Sessões abertas no terminal ou na VPS não guardam quem as

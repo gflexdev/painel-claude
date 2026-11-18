@@ -55,6 +55,15 @@ export function ensureRemote(name, { address } = {}) {
   return entry;
 }
 
+/** Guarda onde está o `claude` (o serviço do launchd não tem o PATH do terminal). null apaga. */
+export function rememberClaudeBin(path) {
+  const stored = readStored();
+  if ((stored.claudeBin ?? null) === (path ?? null)) return false;
+  const { claudeBin: _old, ...rest } = stored;
+  writeStored(path ? { ...rest, claudeBin: path } : rest);
+  return true;
+}
+
 /** Tira a máquina da lista: o token dela deixa de valer no próximo início do servidor. */
 export function removeRemote(name) {
   const stored = readStored();

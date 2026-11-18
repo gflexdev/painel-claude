@@ -3,10 +3,11 @@ import { readFile } from 'node:fs/promises';
 import { timingSafeEqual } from 'node:crypto';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadConfig, STATE_FILE, EVENTS_LOG, USAGE_FILE } from './config.js';
+import { loadConfig, DATA_DIR, STATE_FILE, EVENTS_LOG, USAGE_FILE } from './config.js';
 import { createUsage } from './usage.js';
 import { createAppLinks } from './app-links.js';
 import { createAppUsage } from './app-usage.js';
+import { createUsageProbe } from './usage-probe.js';
 import { createStore } from './store.js';
 import { readSummary } from './transcript.js';
 import { toView } from './state.js';
@@ -69,6 +70,14 @@ const store = createStore({
 const usage = createUsage({ file: USAGE_FILE, onChange: () => store.notify(), onError: logError });
 const appLinks = createAppLinks({ onChange: () => store.notify(), onError: logError });
 const appUsage = createAppUsage({ onSample: (sample) => usage.updateFromApp(sample), onError: logError });
+/** Uso do plano pelo /usage do próprio `claude` do Mac: a fonte oficial e mais fiel. */
+const usageProbe = createUsageProbe({
+  claudeBin: config.claudeBin,
+  workDir: join(DATA_DIR, 'sonda-uso'),
+  isActive: () => store.view().sessions.some((s) => s.status === 'working' || s.status === 'waiting'),
+  onReport: (report) => usage.updateFromProbe(report),
+  onError: logError,
+});
 /** O app do Claude grava os vínculos e o uso em arquivos próprios; relê de tempos em tempos (só o que mudou). */
 const APP_REFRESH_MS = 20_000;
 const permissions = createPermissions({ timeoutMs: PERMISSION_WAIT_MS, onChange: () => store.notify() });
@@ -120,6 +129,7 @@ async function handleHook(req, res) {
   const event = await readLocalEvent(req, res);
   if (!event) return undefined;
   store.ingest(event);
+  if (event.hook_event_name === 'UserPromptSubmit') usageProbe.nudge();
   return sendJson(res, 200, { success: true });
 }
 
@@ -250,6 +260,8 @@ setInterval(() => store.tick(), PRUNE_EVERY_MS).unref();
 const refreshApp = () => Promise.all([appLinks.refresh(), appUsage.refresh()]);
 refreshApp();
 setInterval(refreshApp, APP_REFRESH_MS).unref();
+usageProbe.start();
+if (!usageProbe.available) process.stderr.write('[painel] não achei o `claude`: o uso do plano vem só da status line e do app do Claude\n');
 
 const shutdown = () => {
   store.flush();

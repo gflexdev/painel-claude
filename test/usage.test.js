@@ -121,3 +121,17 @@ test('paceOf: sem reset conhecido fica "unknown" e não inventa ritmo', () => {
   assert.equal(pace.state, 'unknown');
   assert.equal(pace.ideal, null);
 });
+
+test('updateFromProbe: vira a fonte, guarda os limites por modelo e não deixa janela de 5 h vencida', () => {
+  const file = join(mkdtempSync(join(tmpdir(), 'painel-uso-')), 'uso.json');
+  const clock = 1_795_000_000_000;
+  const usage = createUsage({ file, onChange: () => {}, now: () => clock });
+  usage.update({ rate_limits: { five_hour: { used_percentage: 20, resets_at: (clock - HOUR) / 1000 } } });
+  assert.equal(usage.updateFromProbe({ sevenDay: { usedPercentage: 86, resetsAt: clock + DAY }, scoped: [{ label: 'Fable', usedPercentage: 75, resetsAt: clock + DAY }] }), true);
+  const view = usage.view();
+  assert.equal(view.source, 'cli');
+  assert.equal(view.sevenDay.usedPercentage, 86);
+  assert.equal(view.fiveHour, undefined, 'a de 5 h da status line já tinha zerado');
+  assert.equal(view.scoped[0].label, 'Fable');
+  assert.equal(usage.updateFromProbe(null), false);
+});

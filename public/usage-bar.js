@@ -5,8 +5,12 @@ import { WINDOWS, paceOf } from './pace.js';
 
 /** Dado mais velho que isso ganha o aviso "atualizado há …" (a status line só roda com sessão aberta). */
 const STALE_MS = 30 * 60_000;
-/** O app do Claude grava amostras de poucas em poucas horas. */
-const APP_STALE_MS = 3 * 60 * 60_000;
+/** De onde veio o número e depois de quanto tempo ele é avisado como velho. */
+const ORIGIN = Object.freeze({
+  cli: { label: 'vem do /usage do claude', staleAfter: 45 * 60_000 },
+  statusline: { label: 'vem da status line de uma sessão aberta', staleAfter: STALE_MS },
+  app: { label: 'vem do app do Claude', staleAfter: 3 * 60 * 60_000 },
+});
 const WEEKDAY = new Intl.DateTimeFormat('pt-BR', { weekday: 'short' });
 const HOUR_MINUTE = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
@@ -70,11 +74,13 @@ export function renderUsage(container, usage, now) {
   container.hidden = rows.length === 0;
   const list = el('ul', 'usage-list');
   list.append(...rows);
-  const fromApp = usage?.source === 'app';
-  const staleAfter = fromApp ? APP_STALE_MS : STALE_MS;
-  const origin = fromApp ? 'vem do app do Claude' : 'vem da status line de uma sessão aberta';
-  const stale = usage?.updatedAt && now - usage.updatedAt > staleAfter
-    ? [el('p', 'usage-stale', `uso atualizado há ${elapsed(usage.updatedAt, now)} (${origin})`)]
+  const origin = ORIGIN[usage?.source] ?? ORIGIN.statusline;
+  const stale = usage?.updatedAt && now - usage.updatedAt > origin.staleAfter
+    ? [el('p', 'usage-stale', `uso atualizado há ${elapsed(usage.updatedAt, now)} (${origin.label})`)]
     : [];
-  container.replaceChildren(list, ...stale);
+  const scoped = (usage?.scoped ?? []).filter((s) => Number.isFinite(s.usedPercentage));
+  const perModel = scoped.length
+    ? [el('p', 'usage-scoped', `limite por modelo: ${scoped.map((s) => `${s.label} ${pct(s.usedPercentage)}`).join(' · ')}`)]
+    : [];
+  container.replaceChildren(list, ...perModel, ...stale);
 }

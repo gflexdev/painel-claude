@@ -121,13 +121,22 @@ recarrega sozinha, uma vez por versão.
 
 ## Uso do plano
 
-O Claude Code manda à status line um JSON com `rate_limits` (janelas de 5 h e de 7 dias, `used_percentage` e
-`resets_at` em segundos). A status line do painel repassa esse JSON a `POST /usage`, e o servidor guarda só o
-`rate_limits`, em `~/.config/painel-claude/uso.json`.
+Três fontes; vale o dado mais novo. Tudo fica em `~/.config/painel-claude/uso.json`, com `source`.
 
-Limite conhecido: a status line só roda nas sessões de terminal. Sessões no app do Claude não rodam a status
-line, então, sem nenhuma sessão de terminal aberta, o número não atualiza. O painel avisa há quanto tempo foi a
-última leitura.
+1. **`/usage` pelo `claude` do Mac** (`src/usage-probe.js`, `source: "cli"`), a principal. O servidor roda
+   `claude -p "/usage" --output-format stream-json --verbose --no-session-persistence --strict-mcp-config
+   --settings '{"disableAllHooks":true}'` numa pasta própria (`~/.config/painel-claude/sonda-uso`) e lê
+   `usage_report.rate_limits.limits` (documentado em code.claude.com/docs/en/agent-sdk/typescript, marcado como
+   experimental): `weekly_all` vira `sevenDay`, janela de sessão vira `fiveHour` e os limites por modelo vão em
+   `scoped`. Custa 0 tokens. A cada 5 min com sessão rodando e 30 min parado, com espera dobrando a cada falha
+   (até 1 h). O caminho do `claude` vem de `claudeBin` no `config.json`, gravado pelo instalador, ou dos lugares de
+   sempre (`~/.local/bin`, Homebrew). Os hooks ficam desligados na consulta, então ela não aparece no painel.
+2. **Status line** (`source: "statusline"`): o Claude Code manda `rate_limits` à status line nas sessões de
+   terminal, e o painel recebe em `POST /usage`. Atualiza na hora.
+3. **App do Claude** (`source: "app"`): `plan-usage-history.json`, poucas amostras por dia (veja acima).
+
+O painel não usa o token OAuth do Keychain, cookies nem o endpoint `api/oauth/usage`: os termos do Claude Code
+proíbem coletar ou intermediar as credenciais da assinatura (code.claude.com/docs/en/legal-and-compliance).
 
 ## Sessões de outra máquina (VPS)
 

@@ -91,6 +91,28 @@ export function createUsage({ file, onChange, onError, now = Date.now }) {
       onChange?.();
       return true;
     },
+    /**
+     * Resposta do /usage pelo `claude` do Mac (a fonte mais fiel). A janela de 5 h só fica se veio agora ou se
+     * ainda não passou do reset (plano sem janela de sessão não a recebe).
+     */
+    updateFromProbe(report) {
+      if (!report || (!report.sevenDay && !report.fiveHour)) return false;
+      const t = now();
+      const keepFive = current?.fiveHour?.resetsAt > t ? current.fiveHour : undefined;
+      const { fiveHour: _old, ...rest } = current ?? {};
+      const fiveHour = report.fiveHour ?? keepFive;
+      current = {
+        ...rest,
+        ...(fiveHour && { fiveHour }),
+        ...(report.sevenDay && { sevenDay: report.sevenDay }),
+        scoped: report.scoped ?? [],
+        updatedAt: t,
+        source: 'cli',
+      };
+      save();
+      onChange?.();
+      return true;
+    },
     view: () => current,
   };
 }
