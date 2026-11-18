@@ -168,6 +168,18 @@ async function shot(name, { width, height, scale, hash = '', style = 'robo', act
 }
 
 await shot('painel.png', { width: 1280, height: 820, scale: 1.5 });
+const openFamily = async (page) => {
+  await page.click('.tile[data-family]');
+  await sleep(600);
+  await page.evaluate(() => window.scrollTo(0, 0));
+};
+await shot('painel-familia-aberta.png', { width: 1280, height: 1000, scale: 1.5, action: openFamily });
+await shot('celular-familia-fechada.png', { width: 390, height: 844, scale: 2 });
+await shot('celular-familia-aberta.png', { width: 390, height: 844, scale: 2, action: async (page) => {
+  await page.click('.tile[data-family]');
+  await sleep(600);
+  await page.evaluate(() => document.querySelector('.family-open')?.scrollIntoView({ block: 'center' }));
+} });
 await shot('celular-familia.png', { width: 390, height: 844, scale: 2, hash: '#sessao=demo-painel' });
 await shot('celular-permissao.png', { width: 390, height: 844, scale: 2, hash: '#sessao=demo-deploy' });
 await shot('celular-pergunta.png', { width: 390, height: 844, scale: 2, hash: '#sessao=demo-checkout', action: async (page) => {

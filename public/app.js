@@ -5,7 +5,7 @@ import { createDetail } from './detail.js';
 import { renderUsage } from './usage-bar.js';
 import { createStylePicker } from './style-picker.js';
 import { groupFamilies } from './families.js';
-import { createFamilyBlock, subagentChips } from './family-view.js';
+import { createFamilyBlock, fillStrip, stripLabel, subagentChips } from './family-view.js';
 import { ACTIVITY_WORD, STATUS_WORD, accessoryOf, el, elapsed, sessionFromHash, tokens } from './format.js';
 
 const TICK_MS = 1000;
@@ -29,6 +29,8 @@ let lastContactAt = null;
 let online = false;
 const tiles = new Map();
 const families = new Map();
+/** Só uma família aberta por vez (id da sessão principal). */
+let openFamily = null;
 
 const serverNow = () => Date.now() + clockOffset;
 const PAGE_VERSION = document.querySelector('meta[name="painel-version"]')?.content ?? '';
@@ -66,16 +68,26 @@ function createTile(session) {
   const project = el('div', 'project');
   const detailLine = el('div', 'detail-line');
   const agents = el('ul', 'agent-chips');
+  const strip = el('div', 'tile-strip');
+  const badge = el('span', 'tile-badge');
   const statusLine = el('div', 'status-line');
   const word = el('span', 'status-word');
   const time = el('span', 'elapsed');
   statusLine.append(word, time);
-  button.append(bot, lineage, name, project, detailLine, agents, statusLine);
+  button.append(bot, lineage, name, project, detailLine, agents, strip, statusLine, badge);
+  const tile = { button, bot, lineage, name, project, detail: detailLine, agents, strip, badge, word, time, botKey: '', closedFamily: false };
   button.addEventListener('click', () => {
+    // Quadrado de família fechada: o toque abre a família no lugar; o detalhe abre pelos quadrados de dentro.
+    if (tile.closedFamily) {
+      openFamily = session.id;
+      renderGrid();
+      families.get(session.id)?.section.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      return;
+    }
     const current = snapshot.sessions.find((s) => s.id === session.id);
     detail.open(session.id, current);
   });
-  return { button, bot, lineage, name, project, detail: detailLine, agents, word, time, botKey: '' };
+  return tile;
 }
 
 function statusWord(session) {
@@ -111,8 +123,7 @@ function updateTile(tile, session) {
   tile.lineage.textContent = session.parentId ? `${'↳'.repeat(Math.min(session.depth ?? 1, 3))} sessão filha` : '';
   tile.lineage.hidden = !session.parentId;
   tile.button.toggleAttribute('data-child', Boolean(session.parentId));
-  tile.agents.replaceChildren(...subagentChips(session, ACTIVITY_WORD));
-  tile.agents.hidden = !tile.agents.children.length;
+
   tile.word.textContent = statusWord(session);
   tile.time.textContent = elapsed(session.since, serverNow());
   tile.button.setAttribute('aria-label', `${session.name}: ${tile.word.textContent}, ${session.detail}`);
@@ -126,6 +137,42 @@ function tileFor(session, seen) {
   return tile;
 }
 
+/**
+ * Como o quadrado aparece: 'single' (solto: faixa só com losangos), 'closed' (família fechada: cartas,
+ * barrinhas, selo) ou 'member' (dentro da família aberta: papel em cima e etiquetas de subagente).
+ */
+function setTileMode(tile, session, mode, members = []) {
+  const kids = mode === 'closed' ? members.slice(1).map((m) => m.session) : [];
+  const subagents = mode === 'closed'
+    ? members.reduce((sum, m) => sum + (m.session.subagentCount ?? 0), 0)
+    : session.subagentCount ?? 0;
+  tile.closedFamily = mode === 'closed';
+  tile.button.toggleAttribute('data-family', mode === 'closed');
+  tile.button.toggleAttribute('data-member', mode === 'member');
+  if (mode === 'closed') tile.button.setAttribute('aria-expanded', 'false');
+  else tile.button.removeAttribute('aria-expanded');
+
+  const showStrip = mode !== 'member';
+  fillStrip(tile.strip, {
+    kids,
+    subagents: showStrip ? subagents : 0,
+    label: stripLabel({ kids, subagents, firstAgent: session.subagents?.[0], activityWord: ACTIVITY_WORD }),
+  });
+  tile.agents.replaceChildren(...(mode === 'member' ? subagentChips(session, ACTIVITY_WORD) : []));
+  tile.agents.hidden = !tile.agents.children.length;
+
+  const waitingKids = kids.filter((s) => s.status === 'waiting').length;
+  tile.badge.textContent = waitingKids ? String(waitingKids) : '';
+  tile.badge.hidden = !waitingKids;
+  if (waitingKids) tile.badge.setAttribute('aria-label', `${waitingKids} sessão de dentro espera você`);
+
+  if (mode === 'member') {
+    tile.lineage.textContent = session.parentId ? `${'↳'.repeat(Math.min(session.depth ?? 1, 3))} sessão filha` : 'principal';
+    tile.lineage.hidden = false;
+  }
+  if (mode === 'closed') tile.button.setAttribute('aria-label', `${session.name}: família com ${kids.length + 1} sessões. Toque para abrir.`);
+}
+
 /** Põe `node` na posição `index` de `parent`, mexendo no DOM só se precisar. */
 function placeAt(parent, node, index) {
   if (parent.children[index] !== node) parent.insertBefore(node, parent.children[index] ?? null);
@@ -134,22 +181,44 @@ function placeAt(parent, node, index) {
 function renderGrid() {
   const seen = new Set();
   const seenFamilies = new Set();
-  groupFamilies(snapshot.sessions).forEach((item, index) => {
+  const placed = new Set();
+  const items = groupFamilies(snapshot.sessions);
+  if (openFamily && !items.some((i) => i.kind === 'family' && i.id === openFamily)) openFamily = null;
+  items.forEach((item, index) => {
     if (item.kind === 'single') {
-      placeAt(ui.grid, tileFor(item.session, seen).button, index);
+      const tile = tileFor(item.session, seen);
+      setTileMode(tile, item.session, 'single');
+      placeAt(ui.grid, tile.button, index);
+      placed.add(item.session.id);
+      return;
+    }
+    const [root, ...children] = item.members;
+    if (openFamily !== item.id) {
+      const tile = tileFor(root.session, seen);
+      setTileMode(tile, root.session, 'closed', item.members);
+      placeAt(ui.grid, tile.button, index);
+      placed.add(root.session.id);
+      children.forEach(({ session }) => tileFor(session, seen));
       return;
     }
     seenFamilies.add(item.id);
-    const block = families.get(item.id) ?? createFamilyBlock(item.id, renderGrid);
+    const block = families.get(item.id) ?? createFamilyBlock(() => { openFamily = null; renderGrid(); });
     families.set(item.id, block);
-    const isCollapsed = block.update(item.members);
-    item.members.forEach(({ session, level }, position) => {
+    block.update(item.members);
+    const rootTile = tileFor(root.session, seen);
+    setTileMode(rootTile, root.session, 'member');
+    placeAt(block.rootSlot, rootTile.button, 0);
+    placed.add(root.session.id);
+    children.forEach(({ session }, position) => {
       const tile = tileFor(session, seen);
-      tile.button.hidden = isCollapsed && level > 0;
-      placeAt(block.body, tile.button, position);
+      setTileMode(tile, session, 'member');
+      placeAt(block.kids, tile.button, position);
+      placed.add(session.id);
     });
     placeAt(ui.grid, block.section, index);
   });
+  // Filhas de família fechada continuam conhecidas, mas fora da tela.
+  [...tiles.entries()].filter(([id]) => seen.has(id) && !placed.has(id)).forEach(([, tile]) => tile.button.remove());
   [...tiles.keys()].filter((id) => !seen.has(id)).forEach((id) => {
     tiles.get(id).button.remove();
     tiles.delete(id);

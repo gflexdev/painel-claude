@@ -11,11 +11,15 @@ computador.
   <img src="docs/imagens/painel.png" alt="Painel no computador: sessões esperando você, rodando e terminadas, com a barra de uso do plano no topo" width="100%">
 </p>
 
+<p align="center">
+  <img src="docs/imagens/painel-familia-aberta.png" alt="Painel com uma família aberta: a sessão principal ligada às sessões que ela abriu" width="100%">
+</p>
+
 <table>
   <tr>
     <td align="center"><img src="docs/imagens/celular-permissao.png" alt="Pedido de permissão aberto no celular, com os botões Negar e Permitir" width="240"><br><sub>Aprovar um comando pelo celular</sub></td>
     <td align="center"><img src="docs/imagens/celular-pergunta.png" alt="Pergunta do Claude com as opções como botões" width="240"><br><sub>Responder uma pergunta do Claude</sub></td>
-    <td align="center"><img src="docs/imagens/celular-familia.png" alt="Detalhe de uma sessão com a lista de subagentes e as sessões que ela abriu" width="240"><br><sub>Subagentes e sessões ligadas</sub></td>
+    <td align="center"><img src="docs/imagens/celular-familia-aberta.png" alt="Família aberta no celular: a sessão principal e as filhas em lista recuada" width="240"><br><sub>Família aberta no lugar</sub></td>
   </tr>
 </table>
 
@@ -32,10 +36,11 @@ computador.
 - Saber o que cada uma está fazendo agora: lendo, editando, rodando comando, na web, delegando, planejando,
   perguntando ou pensando.
 - Ver os contadores no topo: quantas esperam você, quantas terminaram e você ainda não viu, quantas estão rodando.
-- **Subagentes:** quando uma sessão chama ajudantes (a ferramenta Agent), cada um aparece no tile como uma etiqueta
-  `◇ tipo · o que está fazendo`. Se o pedido de permissão vier de um subagente, o painel diz qual.
-- **Famílias:** uma sessão que abriu outras no app do Claude fica num bloco junto com as filhas. O bloco sobe
-  quando qualquer uma delas precisa de você e pode ser recolhido num tile só.
+- **Subagentes:** quando uma sessão chama ajudantes (a ferramenta Agent), o quadrado ganha um losango ◇ por
+  subagente, com o tipo e o que está fazendo. Se o pedido de permissão vier de um subagente, o painel diz qual.
+- **Famílias:** uma sessão que abriu outras no app do Claude vira um quadrado com cartas atrás e uma barrinha
+  colorida por sessão de dentro. Um selo vermelho avisa quando alguém de dentro espera você. Tocar no quadrado
+  abre a família ali mesmo, com a sessão principal ligada às filhas.
 
 **Acompanhar**
 
@@ -164,9 +169,12 @@ O Tailscale cria uma rede privada entre os seus aparelhos. O painel continua vis
   botões. Depois de responder, o Claude segue na hora.
 - **Barra de uso, no topo:** o risco branco marca onde você deveria estar agora para gastar 100% até o reset. A
   frase embaixo diz o que fazer: usar mais (azul), manter (verde) ou segurar (vermelho).
-- **Família:** o bloco com borda junta a sessão e as que ela abriu (cada filha tem "↳ sessão filha" em cima do
-  nome). O botão "recolher" deixa só a sessão de cima, com um aviso se alguma filha espera você.
-- **◇ Subagentes:** etiquetas no tile; a vermelha é a de um subagente pedindo permissão.
+- **Família fechada:** o quadrado com cartas atrás. Cada barrinha embaixo é uma sessão de dentro, na cor da
+  situação dela (a vermelha brilha), e o número no canto diz quantas esperam você.
+- **Família aberta:** tocar no quadrado abre a família no lugar, ocupando a linha: a principal, a linha até as
+  filhas ("↳ sessão filha") e as etiquetas dos subagentes. Tocar num quadrado de dentro abre o detalhe;
+  "fechar ▴" volta ao quadrado. Só uma família fica aberta por vez.
+- **◇ Subagentes:** losangos roxos na faixa do quadrado; dentro da família aberta, etiquetas com o que cada um faz.
 - **Estilo do personagem:** o botão com o bonequinho, ao lado do relógio.
 - **Mac fora do ar:** uma faixa vermelha no topo diz há quanto tempo o painel não tem notícia do Mac.
 
