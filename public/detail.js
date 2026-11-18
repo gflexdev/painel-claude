@@ -22,7 +22,8 @@ export function createDetail({ api, serverNow, agentStyle = () => 'robo' }) {
   const statusLine = (data) => {
     const word = STATUS_WORD[data.status] ?? data.status;
     const doing = data.status === 'working' && data.activity ? ` · ${ACTIVITY_WORD[data.activity] ?? ''}` : '';
-    return `${word}${doing} há ${elapsed(data.since, serverNow())} — ${data.detail}`;
+    const since = elapsed(data.since, serverNow());
+    return `${word}${doing} ${since === 'agora' ? 'agora' : `há ${since}`} — ${data.detail}`;
   };
 
   function fillHeader(data) {

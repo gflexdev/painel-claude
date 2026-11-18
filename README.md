@@ -7,6 +7,18 @@ Você vê quem está **rodando**, quem está **esperando você**, quem **termino
 Claude pede uma permissão, faz uma pergunta ou quer aprovar um plano, dá para responder pelo painel sem voltar ao
 computador.
 
+<p align="center">
+  <img src="docs/imagens/painel.png" alt="Painel no computador: sessões esperando você, rodando e terminadas, com a barra de uso do plano no topo" width="100%">
+</p>
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/imagens/celular-permissao.png" alt="Pedido de permissão aberto no celular, com os botões Negar e Permitir" width="240"><br><sub>Aprovar um comando pelo celular</sub></td>
+    <td align="center"><img src="docs/imagens/celular-pergunta.png" alt="Pergunta do Claude com as opções como botões" width="240"><br><sub>Responder uma pergunta do Claude</sub></td>
+    <td align="center"><img src="docs/imagens/celular-resposta.png" alt="Detalhe da sessão com a última resposta em markdown formatado" width="240"><br><sub>Ver a última resposta, formatada</sub></td>
+  </tr>
+</table>
+
 > **Versão 0.1:** primeira versão para amigos. Funciona só no **macOS** por enquanto (veja [Futuro](#futuro)).
 
 ## O que dá para fazer
@@ -41,6 +53,14 @@ painel.
 **Extras**
 
 - **Estilo do personagem:** Robô, Bichinho, Fantasminha, Astronauta ou Selo. Cada aparelho guarda o seu.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/imagens/estilos.png" alt="Janela de escolha do estilo do agente com os cinco estilos" width="360"><br><sub>Os cinco estilos de personagem</sub></td>
+    <td align="center"><img src="docs/imagens/celular-bichinho.png" alt="Grade no celular com o estilo Bichinho" width="220"><br><sub>A grade com o Bichinho</sub></td>
+  </tr>
+</table>
+
 - **Widget do Mac** com os mesmos botões (opcional, precisa do Xcode).
 - **Sessões de um servidor** (uma VPS, por exemplo) no mesmo painel, com o nome da máquina no tile (avançado).
 
@@ -259,3 +279,6 @@ O resumo acima é só um guia; o que vale é o texto da licença. Para uso comer
 ## Para quem quer mexer no código
 
 API, hooks, segurança e desenvolvimento: [docs/tecnico.md](docs/tecnico.md). Testes: `npm test`.
+
+As imagens deste README são de um painel de demonstração com sessões de exemplo, geradas por
+`scripts/capturas.mjs`. Nenhuma sessão real aparece nelas.
