@@ -1,0 +1,77 @@
+name: PainelClaude
+options:
+  bundleIdPrefix: br.com.gflex
+  deploymentTarget:
+    macOS: "14.0"
+  developmentLanguage: pt-BR
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # Assinatura local (ad-hoc): não precisa de conta Apple. Para usar um time, troque por
+    # CODE_SIGN_STYLE: Automatic e DEVELOPMENT_TEAM: <ID> (veja o README).
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    DEVELOPMENT_TEAM: ""
+    ENABLE_HARDENED_RUNTIME: NO
+    DEAD_CODE_STRIPPING: YES
+    CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+targets:
+  PainelClaude:
+    type: application
+    platform: macOS
+    sources:
+      - App
+      - Shared
+    dependencies:
+      - target: PainelClaudeWidget
+        embed: true
+        codeSign: true
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Painel Claude
+        CFBundleDevelopmentRegion: pt-BR
+        LSUIElement: true
+        LSApplicationCategoryType: public.app-category.developer-tools
+        CFBundleURLTypes:
+          - CFBundleURLName: br.com.gflex.painel-claude.mac
+            CFBundleURLSchemes: [painelclaude]
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    entitlements:
+      path: App/PainelClaude.entitlements
+      properties: {}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: br.com.gflex.painel-claude.mac
+        PRODUCT_NAME: Painel Claude
+        GENERATE_INFOPLIST_FILE: NO
+  PainelClaudeWidget:
+    type: app-extension
+    platform: macOS
+    sources:
+      - Widget
+      - Shared
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: Painel Claude
+        CFBundleDevelopmentRegion: pt-BR
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Widget/PainelClaudeWidget.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        # O widget só lê o estado e deixa decisões numa pasta que o app hospedeiro vigia.
+        # Ele não fala com o servidor e não vê o token.
+        com.apple.security.temporary-exception.files.home-relative-path.read-write:
+          - /Library/Application Support/PainelClaude/
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: br.com.gflex.painel-claude.mac.widget
+        PRODUCT_NAME: PainelClaudeWidget
+        GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: YES

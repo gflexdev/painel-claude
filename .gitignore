@@ -1,0 +1,27 @@
+# Sistema e editores
+.DS_Store
+._*
+.vscode/
+.idea/
+
+# Node
+node_modules/
+
+# Pacote gerado por scripts/empacotar.sh
+dist/
+
+# Firmware: build do PlatformIO, segredos do Wi-Fi/token e capturas de tela com sessões reais
+firmware/.pio/
+firmware/include/secrets.h
+firmware/capturas/
+
+# Widget do Mac: build e dados do usuário no Xcode
+widget-mac/build/
+widget-mac/*.xcodeproj/xcuserdata/
+widget-mac/*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Estado local (o painel guarda em ~/.config/painel-claude, mas por via das dúvidas)
+*.log
+uso.json
+state.json
+config.json

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0e0f12">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="painel-version" content="__ASSET_VERSION__">
+  <title>Painel Claude</title>
+  <meta name="description" content="Estado das sessões do Claude Code no Mac.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Painel">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="detail.css">
+  <link rel="stylesheet" href="usage.css">
+  <link rel="stylesheet" href="agents.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <h1>Painel <span>Claude</span></h1>
+    </div>
+    <ul class="counters" aria-label="Resumo das sessões">
+      <li class="counter" data-status="waiting"><b id="count-waiting">0</b> esperando você</li>
+      <li class="counter" data-status="unseen"><b id="count-unseen">0</b> para ver</li>
+      <li class="counter" data-status="working"><b id="count-working">0</b> rodando</li>
+      <li class="counter" data-status="idle"><b id="count-idle">0</b> paradas</li>
+    </ul>
+    <div class="clock-wrap">
+      <button id="style-button" class="style-button" type="button" aria-label="Escolher o estilo do agente"></button>
+      <span id="link" class="link" data-state="connecting" title="Conexão com o Mac"></span>
+      <time id="clock" class="clock">--:--</time>
+    </div>
+  </header>
+
+  <section id="usage" class="usage" aria-label="Uso do plano" hidden></section>
+
+  <p id="offline" class="offline" role="status" hidden><span id="offline-text"></span></p>
+
+  <main>
+    <section id="grid" class="grid" aria-live="polite" aria-label="Sessões"></section>
+    <p id="empty" class="empty" hidden>Nenhuma sessão agora.<br><small>Quando você abrir uma no Claude Code ela aparece aqui.</small></p>
+    <form id="token-form" class="token-form" hidden>
+      <h2>Conectar ao Mac</h2>
+      <p>Cole o token que o instalador mostrou (ou abra o link completo com <code>?t=</code>).</p>
+      <input id="token-input" type="password" autocomplete="off" placeholder="token" required>
+      <button type="submit">Conectar</button>
+    </form>
+  </main>
+
+  <dialog id="style-picker" class="picker" aria-labelledby="picker-title">
+    <div class="picker-card">
+      <header class="picker-head">
+        <div>
+          <h2 id="picker-title">Estilo do agente</h2>
+          <p class="picker-sub">Vale só para este aparelho.</p>
+        </div>
+        <form method="dialog"><button class="close" aria-label="Fechar">✕</button></form>
+      </header>
+      <div id="picker-options" class="picker-options" role="radiogroup" aria-labelledby="picker-title"></div>
+    </div>
+  </dialog>
+
+  <dialog id="detail" class="detail" aria-labelledby="detail-name">
+    <article>
+      <header class="detail-head">
+        <div id="detail-bot" class="detail-bot" aria-hidden="true"></div>
+        <div class="detail-title">
+          <h2 id="detail-name"></h2>
+          <p id="detail-meta" class="detail-meta"></p>
+        </div>
+        <button id="detail-close" class="close" type="button" aria-label="Fechar">✕</button>
+      </header>
+      <p id="detail-status" class="detail-status"></p>
+      <dl id="detail-stats" class="stats"></dl>
+
+      <section id="detail-request" class="request" hidden aria-labelledby="req-title">
+        <h3 id="req-title">Pedido de permissão</h3>
+        <p id="req-tool" class="req-tool"></p>
+        <pre id="req-preview" class="req-preview"></pre>
+        <div id="req-questions" class="req-questions"></div>
+        <div class="req-actions">
+          <button id="req-deny" class="req-btn deny" type="button">Negar</button>
+          <button id="req-allow" class="req-btn allow" type="button">Permitir</button>
+        </div>
+        <p id="req-feedback" class="req-feedback" role="status"></p>
+      </section>
+
+      <section class="detail-block">
+        <h3>Último pedido</h3>
+        <p id="detail-prompt" class="prompt"></p>
+      </section>
+      <section class="detail-block">
+        <h3>Última resposta</h3>
+        <p id="detail-answer" class="answer"></p>
+      </section>
+      <section class="detail-block">
+        <h3>Ferramentas recentes</h3>
+        <ul id="detail-tools" class="tools"></ul>
+      </section>
+    </article>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

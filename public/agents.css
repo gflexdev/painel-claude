@@ -1,0 +1,89 @@
+/* ---------- estilos de personagem (public/agents.js) ---------- */
+/* O robô continua com as regras de style.css; aqui só o que os estilos novos acrescentam. */
+.agent .lids { display: none; }
+.agent .figure { transition: opacity var(--duration-normal, 300ms) var(--ease-out); }
+.agent-selo { shape-rendering: geometricPrecision; }
+.agent-selo .acc { shape-rendering: crispEdges; }
+.agent-selo .initials { font: 700 3.5px/1 var(--font-display); fill: #14161b; letter-spacing: -0.02em; }
+.agent-selo .dot { stroke: var(--tile); stroke-width: 0.5; }
+
+/* rodando: pisca os olhos; parada: o bichinho dorme e o fantasma some um pouco */
+.tile[data-status='working'] .bot .pupil { animation: blink 2.6s steps(1) infinite; }
+.tile[data-status='idle'] .agent-bicho .pupil,
+.detail[data-status='idle'] .agent-bicho .pupil { display: none; }
+.tile[data-status='idle'] .agent-bicho .lids,
+.detail[data-status='idle'] .agent-bicho .lids { display: inline; }
+.tile[data-status='idle'] .agent-fantasma .figure,
+.detail[data-status='idle'] .agent-fantasma .figure { opacity: 0.55; }
+/* esperando você: o anel do selo pulsa */
+.tile[data-status='waiting'] .agent-selo .mood { animation: pulse 1.4s ease-in-out infinite; }
+
+/* ---------- botão e janela de escolha ---------- */
+.style-button {
+  width: 44px;
+  height: 44px;
+  padding: 7px 5px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--tile);
+  color: var(--working);
+  cursor: pointer;
+  transition: border-color var(--duration-fast, 150ms) ease, transform var(--duration-fast, 150ms) ease;
+}
+.style-button:hover { border-color: var(--ink-faint); }
+.style-button:active { transform: scale(0.96); }
+.style-button:focus-visible { outline: 2px solid var(--unseen); outline-offset: 2px; }
+.style-button svg { display: block; width: 100%; height: auto; shape-rendering: crispEdges; }
+
+.picker {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--tile);
+  color: var(--ink);
+}
+.picker::backdrop { background: rgba(5, 6, 8, 0.72); }
+.picker-card { padding: 20px 20px 22px; }
+.picker-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.picker-head h2 { margin: 0; font: 700 22px/1.15 var(--font-display); }
+.picker-sub { margin: 4px 0 0; font-size: 12px; color: var(--ink-faint); }
+.picker-head form { margin: 0; }
+.picker-options { display: grid; gap: 8px; }
+.picker-option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 72px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color var(--duration-fast, 150ms) ease, background var(--duration-fast, 150ms) ease;
+}
+.picker-option:hover { border-color: var(--ink-faint); background: var(--tile-hi); }
+.picker-option:focus-visible { outline: 2px solid var(--unseen); outline-offset: 2px; }
+.picker-option[aria-checked='true'] {
+  border-color: var(--working);
+  background: color-mix(in srgb, var(--working) 9%, var(--bg));
+}
+.picker-samples { display: flex; gap: 10px; flex: none; }
+.picker-sample { display: block; width: 48px; }
+.picker-sample[data-status='working'] { color: var(--working); }
+.picker-sample[data-status='waiting'] { color: var(--waiting); }
+.picker-sample svg { display: block; width: 100%; height: auto; shape-rendering: crispEdges; }
+.picker-sample .eye { fill: var(--bg); }
+.picker-sample .acc { color: var(--ink-dim); }
+.picker-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.picker-text strong { font: 700 16px/1.2 var(--font-display); }
+.picker-text small { font-size: 12px; color: var(--ink-dim); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tile[data-status='waiting'] .agent-selo .mood { animation: none; }
+}

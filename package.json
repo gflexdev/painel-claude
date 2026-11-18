@@ -1,0 +1,19 @@
+{
+  "name": "painel-claude",
+  "version": "0.1.0",
+  "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "description": "Painel de bancada que mostra o estado das sessões do Claude Code (tablet hoje, display ESP32 depois).",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js",
+    "install-mac": "node scripts/install.js",
+    "uninstall-mac": "node scripts/uninstall.js",
+    "install-vps": "node scripts/vps.js install",
+    "uninstall-vps": "node scripts/vps.js uninstall"
+  }
+}

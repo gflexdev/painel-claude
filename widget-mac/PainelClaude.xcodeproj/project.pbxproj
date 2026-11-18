@@ -1,0 +1,493 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		29BB85109C53E077E049AD3E /* Armazem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1486336F26F3E03172199B22 /* Armazem.swift */; };
+		2D27B790861BBAE4753573AD /* Armazem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1486336F26F3E03172199B22 /* Armazem.swift */; };
+		4939C49B30715D034FD734E0 /* Modelo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30632654F4225D2F1E7AA27D /* Modelo.swift */; };
+		5E4E69B82CC8879AFF505A8E /* Token.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DC1FE9AD567B259FE0D1385 /* Token.swift */; };
+		630C8C90E352CA8254CF9CD4 /* Modelo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30632654F4225D2F1E7AA27D /* Modelo.swift */; };
+		73B2053CC9AB47583E6E6762 /* Cliente.swift in Sources */ = {isa = PBXBuildFile; fileRef = D994BE571587E40715E84C0B /* Cliente.swift */; };
+		94F0A60D5CD367BF335EFB9D /* Formato.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40DD614A1CC6ED4550DB91AF /* Formato.swift */; };
+		A61993DA65EC2EFC34252344 /* Pacote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05FABE690E6EFE1714B9CE95 /* Pacote.swift */; };
+		A7D7E593B94D18CCA74C4798 /* PainelClaudeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 555D8866B8B6F7B5DEB665B1 /* PainelClaudeApp.swift */; };
+		CCD8CAEB833354A87E710886 /* Vistas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BFA0195913077CB786E7789 /* Vistas.swift */; };
+		CCE2D9C323E8D94BB49247BD /* Sincronizador.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C11E852C7155510705C84EA /* Sincronizador.swift */; };
+		CE520868B78F60959B846EB0 /* Robo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8984F56EDEBD35990B899E1 /* Robo.swift */; };
+		CF514929169A7234672F7822 /* Formato.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40DD614A1CC6ED4550DB91AF /* Formato.swift */; };
+		D6059FCFC92BC182B9817322 /* PainelClaudeWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 184310F9F6CD189A52A10B5A /* PainelClaudeWidget.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D9A219D84E72BE51F99C1009 /* Robo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8984F56EDEBD35990B899E1 /* Robo.swift */; };
+		DE5C3EFA31A77D92FA8EC67C /* Intencoes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E44481C745175978395CB056 /* Intencoes.swift */; };
+		EDA1A27AEB22932D147096E3 /* PainelWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 062DE0477D55925782F8B73A /* PainelWidget.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		9CDF4D40572F6CDD911C6289 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2DE61D403BEF969D11D29FBF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 959C49ADC05B48E492E81DAA;
+			remoteInfo = PainelClaudeWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		518EF2BF87E3D03C2BBFA8EE /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				D6059FCFC92BC182B9817322 /* PainelClaudeWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		05FABE690E6EFE1714B9CE95 /* Pacote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pacote.swift; sourceTree = "<group>"; };
+		062DE0477D55925782F8B73A /* PainelWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PainelWidget.swift; sourceTree = "<group>"; };
+		1486336F26F3E03172199B22 /* Armazem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Armazem.swift; sourceTree = "<group>"; };
+		184310F9F6CD189A52A10B5A /* PainelClaudeWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PainelClaudeWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		30632654F4225D2F1E7AA27D /* Modelo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Modelo.swift; sourceTree = "<group>"; };
+		3DC1FE9AD567B259FE0D1385 /* Token.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Token.swift; sourceTree = "<group>"; };
+		40DD614A1CC6ED4550DB91AF /* Formato.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formato.swift; sourceTree = "<group>"; };
+		555D8866B8B6F7B5DEB665B1 /* PainelClaudeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PainelClaudeApp.swift; sourceTree = "<group>"; };
+		7392F3C9AFAC88CC2A9D9C67 /* PainelClaude.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PainelClaude.entitlements; sourceTree = "<group>"; };
+		891DBF68F38951E5638F884C /* PainelClaude.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PainelClaude.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		96FE9F090EFCA675C0E8BA8E /* PainelClaudeWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PainelClaudeWidget.entitlements; sourceTree = "<group>"; };
+		9BFA0195913077CB786E7789 /* Vistas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vistas.swift; sourceTree = "<group>"; };
+		9C11E852C7155510705C84EA /* Sincronizador.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sincronizador.swift; sourceTree = "<group>"; };
+		B936076E408ECEE3AE37D653 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		BCD4079AB29B40965BD2E149 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		D8984F56EDEBD35990B899E1 /* Robo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Robo.swift; sourceTree = "<group>"; };
+		D994BE571587E40715E84C0B /* Cliente.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cliente.swift; sourceTree = "<group>"; };
+		E44481C745175978395CB056 /* Intencoes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Intencoes.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		55882AE9AE95B2FE51DB9A6D /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				1486336F26F3E03172199B22 /* Armazem.swift */,
+				40DD614A1CC6ED4550DB91AF /* Formato.swift */,
+				30632654F4225D2F1E7AA27D /* Modelo.swift */,
+				D8984F56EDEBD35990B899E1 /* Robo.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		7874DA3BE0AE175015AE64A0 = {
+			isa = PBXGroup;
+			children = (
+				89BBE5AA3002DD23E902CEE8 /* App */,
+				55882AE9AE95B2FE51DB9A6D /* Shared */,
+				89F2A3CE78BEB79EB7A88B92 /* Widget */,
+				EBD2C96C4E744B2AF3286CAF /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		89BBE5AA3002DD23E902CEE8 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				D994BE571587E40715E84C0B /* Cliente.swift */,
+				B936076E408ECEE3AE37D653 /* Info.plist */,
+				7392F3C9AFAC88CC2A9D9C67 /* PainelClaude.entitlements */,
+				555D8866B8B6F7B5DEB665B1 /* PainelClaudeApp.swift */,
+				9C11E852C7155510705C84EA /* Sincronizador.swift */,
+				3DC1FE9AD567B259FE0D1385 /* Token.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		89F2A3CE78BEB79EB7A88B92 /* Widget */ = {
+			isa = PBXGroup;
+			children = (
+				BCD4079AB29B40965BD2E149 /* Info.plist */,
+				E44481C745175978395CB056 /* Intencoes.swift */,
+				05FABE690E6EFE1714B9CE95 /* Pacote.swift */,
+				96FE9F090EFCA675C0E8BA8E /* PainelClaudeWidget.entitlements */,
+				062DE0477D55925782F8B73A /* PainelWidget.swift */,
+				9BFA0195913077CB786E7789 /* Vistas.swift */,
+			);
+			path = Widget;
+			sourceTree = "<group>";
+		};
+		EBD2C96C4E744B2AF3286CAF /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				891DBF68F38951E5638F884C /* PainelClaude.app */,
+				184310F9F6CD189A52A10B5A /* PainelClaudeWidget.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		959C49ADC05B48E492E81DAA /* PainelClaudeWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 990BC6727E01F9745E80F86E /* Build configuration list for PBXNativeTarget "PainelClaudeWidget" */;
+			buildPhases = (
+				6D0DD3836E08E4CC1FAFF183 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PainelClaudeWidget;
+			packageProductDependencies = (
+			);
+			productName = PainelClaudeWidget;
+			productReference = 184310F9F6CD189A52A10B5A /* PainelClaudeWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		EBAF2AE8DD2432D5EAD0FA44 /* PainelClaude */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1D4234179CFECAE431AD911F /* Build configuration list for PBXNativeTarget "PainelClaude" */;
+			buildPhases = (
+				61FF31F5E871B5966CE0AE68 /* Sources */,
+				518EF2BF87E3D03C2BBFA8EE /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				61105A2C5ED1AB038196D1FE /* PBXTargetDependency */,
+			);
+			name = PainelClaude;
+			packageProductDependencies = (
+			);
+			productName = PainelClaude;
+			productReference = 891DBF68F38951E5638F884C /* PainelClaude.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		2DE61D403BEF969D11D29FBF /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					959C49ADC05B48E492E81DAA = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Manual;
+					};
+					EBAF2AE8DD2432D5EAD0FA44 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = 78848DCBCBD88F6BC94A34EC /* Build configuration list for PBXProject "PainelClaude" */;
+			developmentRegion = "pt-BR";
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				"pt-BR",
+			);
+			mainGroup = 7874DA3BE0AE175015AE64A0;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = EBD2C96C4E744B2AF3286CAF /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				EBAF2AE8DD2432D5EAD0FA44 /* PainelClaude */,
+				959C49ADC05B48E492E81DAA /* PainelClaudeWidget */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		61FF31F5E871B5966CE0AE68 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				29BB85109C53E077E049AD3E /* Armazem.swift in Sources */,
+				73B2053CC9AB47583E6E6762 /* Cliente.swift in Sources */,
+				CF514929169A7234672F7822 /* Formato.swift in Sources */,
+				4939C49B30715D034FD734E0 /* Modelo.swift in Sources */,
+				A7D7E593B94D18CCA74C4798 /* PainelClaudeApp.swift in Sources */,
+				CE520868B78F60959B846EB0 /* Robo.swift in Sources */,
+				CCE2D9C323E8D94BB49247BD /* Sincronizador.swift in Sources */,
+				5E4E69B82CC8879AFF505A8E /* Token.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6D0DD3836E08E4CC1FAFF183 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2D27B790861BBAE4753573AD /* Armazem.swift in Sources */,
+				94F0A60D5CD367BF335EFB9D /* Formato.swift in Sources */,
+				DE5C3EFA31A77D92FA8EC67C /* Intencoes.swift in Sources */,
+				630C8C90E352CA8254CF9CD4 /* Modelo.swift in Sources */,
+				A61993DA65EC2EFC34252344 /* Pacote.swift in Sources */,
+				EDA1A27AEB22932D147096E3 /* PainelWidget.swift in Sources */,
+				D9A219D84E72BE51F99C1009 /* Robo.swift in Sources */,
+				CCD8CAEB833354A87E710886 /* Vistas.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		61105A2C5ED1AB038196D1FE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 959C49ADC05B48E492E81DAA /* PainelClaudeWidget */;
+			targetProxy = 9CDF4D40572F6CDD911C6289 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		2602032A1900DE6F5243450D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/PainelClaude.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "br.com.gflex.painel-claude.mac";
+				PRODUCT_NAME = "Painel Claude";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		3C8B651279B95C54FA45C0E2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widget/PainelClaudeWidget.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Widget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "br.com.gflex.painel-claude.mac.widget";
+				PRODUCT_NAME = PainelClaudeWidget;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		59664F08539D53C0B68D5F75 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.10;
+			};
+			name = Debug;
+		};
+		C5BC0D20F38382136E1D66DF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/PainelClaude.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "br.com.gflex.painel-claude.mac";
+				PRODUCT_NAME = "Painel Claude";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		E61FA1456011FEEC2ACF9C96 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widget/PainelClaudeWidget.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Widget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "br.com.gflex.painel-claude.mac.widget";
+				PRODUCT_NAME = PainelClaudeWidget;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+		E7A89ACB24A939D952AB9569 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.10;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1D4234179CFECAE431AD911F /* Build configuration list for PBXNativeTarget "PainelClaude" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2602032A1900DE6F5243450D /* Debug */,
+				C5BC0D20F38382136E1D66DF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		78848DCBCBD88F6BC94A34EC /* Build configuration list for PBXProject "PainelClaude" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				59664F08539D53C0B68D5F75 /* Debug */,
+				E7A89ACB24A939D952AB9569 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		990BC6727E01F9745E80F86E /* Build configuration list for PBXNativeTarget "PainelClaudeWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3C8B651279B95C54FA45C0E2 /* Debug */,
+				E61FA1456011FEEC2ACF9C96 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 2DE61D403BEF969D11D29FBF /* Project object */;
+}
