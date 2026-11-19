@@ -68,9 +68,10 @@
 
   /* Quadros: cabeçalho numa linha só (nome à esquerda, contadores à direita). */
   .group { grid-column: 1 / -1; }
-  .group-head { flex-direction: row; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; }
-  .group-head > .group-line:first-child { flex: 1; }
-  .group-meta { flex: none; height: auto; padding-left: 0; }
+  /* Sem espaço para os dois, o nome fica inteiro e os contadores descem para a linha de baixo. */
+  .group-head { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 10px 10px 10px 12px; }
+  .group-head > .group-line:first-child { flex: 1 0 auto; max-width: 100%; }
+  .group-meta { flex: 0 1 auto; height: auto; margin-left: auto; padding-left: 0; }
   .group-name { font-size: 15px; }
   .group-total, .group-scheduled, .group-bars { display: none; }
   .group-counts { gap: 8px; }
