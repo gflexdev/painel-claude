@@ -102,7 +102,7 @@ só pelo painel aberto no próprio Mac:
 <table>
   <tr>
     <td align="center"><img src="docs/imagens/estilos.png" alt="Janela de escolha do estilo do agente com os cinco estilos" width="360"><br><sub>Os cinco estilos de personagem</sub></td>
-    <td align="center"><img src="docs/imagens/celular-bichinho.png" alt="Grade no celular com o estilo Bichinho" width="220"><br><sub>A grade com o Bichinho</sub></td>
+    <td align="center"><img src="docs/imagens/celular-bichinho.png" alt="Quadros no celular, em lista, com o estilo Bichinho" width="220"><br><sub>O celular com o Bichinho</sub></td>
   </tr>
 </table>
 
@@ -208,6 +208,11 @@ O Tailscale cria uma rede privada entre os seus aparelhos. O painel continua vis
 - **Detalhe ao lado:** no computador (tela de 900 px ou mais), o detalhe abre à direita e a sessão aberta ganha um
   anel claro. Arraste a borda esquerda do painel para mudar a largura (ou use as setas com ela em foco; dois
   cliques voltam ao padrão). Esc fecha.
+- **No celular:** as sessões aparecem em lista, uma por linha, com a situação e o tempo à direita. O uso do plano
+  fica numa linha por janela (toque para ver o ritmo e o reset). O detalhe sobe de baixo, com o nome e o ✕ presos
+  no topo e o campo de mensagem preso embaixo.
+- **Detalhe enxuto:** pedido longo aparece em 4 linhas ("ver tudo" mostra o resto), as ferramentas recentes ficam
+  recolhidas (toque no título para abrir) e as ações (arquivar, sessão filha) ficam no fim.
 - **Pedido pendente:** o detalhe mostra um cartão com o comando inteiro (ou a pergunta, ou o plano) e os
   botões. Depois de responder, o Claude segue na hora.
 - **Último pedido · pelo painel:** quando o pedido mais recente foi uma mensagem mandada pelo painel, o detalhe
