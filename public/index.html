@@ -23,6 +23,9 @@
   <link rel="stylesheet" href="usage.css">
   <link rel="stylesheet" href="agents.css">
   <link rel="stylesheet" href="families.css">
+  <link rel="stylesheet" href="boards.css">
+  <link rel="stylesheet" href="panel.css">
+  <link rel="stylesheet" href="orbit.css">
 </head>
 <body>
   <header class="topbar">
@@ -31,12 +34,21 @@
       <h1>Painel <span>Claude</span></h1>
     </div>
     <ul class="counters" aria-label="Resumo das sessões">
-      <li class="counter" data-status="waiting"><b id="count-waiting">0</b> esperando você</li>
+      <li class="counter" data-status="waiting"><b id="count-waiting">0</b> esperando<span class="long"> você</span></li>
       <li class="counter" data-status="unseen"><b id="count-unseen">0</b> para ver</li>
       <li class="counter" data-status="working"><b id="count-working">0</b> rodando</li>
       <li class="counter" data-status="idle"><b id="count-idle">0</b> paradas</li>
     </ul>
+    <div id="view-switch" class="view-switch" role="group" aria-label="Modo de ver">
+      <button type="button" data-view="quadros" aria-pressed="true">Quadros</button>
+      <button type="button" data-view="grade" aria-pressed="false">Grade</button>
+      <button type="button" data-view="mapa" aria-pressed="false">Mapa</button>
+    </div>
     <div class="clock-wrap">
+      <button id="scheduled-button" class="top-btn" type="button" aria-pressed="true" hidden></button>
+      <button id="archived-button" class="top-btn" type="button" title="Sessões arquivadas no painel" hidden></button>
+      <button id="launch-button" class="top-btn square launch" type="button" aria-label="Nova sessão" title="Nova sessão" hidden>+</button>
+      <button id="settings-button" class="top-btn square" type="button" aria-label="Ajustes" title="Ajustes">⚙</button>
       <button id="style-button" class="style-button" type="button" aria-label="Escolher o estilo do agente"></button>
       <span id="link" class="link" data-state="connecting" title="Conexão com o Mac"></span>
       <time id="clock" class="clock">--:--</time>
@@ -48,6 +60,8 @@
   <p id="offline" class="offline" role="status" hidden><span id="offline-text"></span></p>
 
   <main>
+    <section id="orbit" class="orbit" aria-label="Mapa das sessões" hidden></section>
+    <div id="grid-ruler" class="grid grid-ruler" aria-hidden="true"></div>
     <section id="grid" class="grid" aria-live="polite" aria-label="Sessões"></section>
     <p id="empty" class="empty" hidden>Nenhuma sessão agora.<br><small>Quando você abrir uma no Claude Code ela aparece aqui.</small></p>
     <form id="token-form" class="token-form" hidden>
@@ -72,7 +86,10 @@
   </dialog>
 
   <dialog id="detail" class="detail" aria-labelledby="detail-name">
+    <div id="detail-resize" class="sheet-resize" role="separator" aria-orientation="vertical" tabindex="0"
+      aria-label="Largura do painel: arraste ou use as setas" title="Arraste para mudar a largura; dois cliques voltam ao padrão"></div>
     <article>
+      <span class="sheet-grip" aria-hidden="true"></span>
       <header class="detail-head">
         <div id="detail-bot" class="detail-bot" aria-hidden="true"></div>
         <div class="detail-title">
@@ -96,6 +113,24 @@
         <p id="req-feedback" class="req-feedback" role="status"></p>
       </section>
 
+      <section id="detail-actions" class="detail-block actions" aria-label="Ações da sessão">
+        <div class="act-row">
+          <button id="act-child" class="act-btn" type="button" hidden>+ sessão filha</button>
+          <button id="act-archive" class="act-btn" type="button">arquivar no painel</button>
+          <button id="act-close" class="act-btn danger" type="button" hidden>fechar sessão</button>
+          <button id="act-remove" class="act-btn danger" type="button" hidden>apagar sessão</button>
+        </div>
+        <p id="act-note" class="act-note" role="status"></p>
+      </section>
+
+      <section class="detail-block">
+        <h3 id="detail-prompt-title">Último pedido</h3>
+        <p id="detail-prompt" class="prompt"></p>
+      </section>
+      <section class="detail-block">
+        <h3>Última resposta</h3>
+        <div id="detail-answer" class="answer"></div>
+      </section>
       <section id="detail-agents" class="detail-block" hidden>
         <h3>Subagentes</h3>
         <ul id="detail-agents-list" class="agent-list"></ul>
@@ -104,20 +139,81 @@
         <h3>Sessões ligadas</h3>
         <ul id="detail-links-list" class="link-list"></ul>
       </section>
-
-      <section class="detail-block">
-        <h3>Último pedido</h3>
-        <p id="detail-prompt" class="prompt"></p>
-      </section>
-      <section class="detail-block">
-        <h3>Última resposta</h3>
-        <p id="detail-answer" class="answer"></p>
-      </section>
       <section class="detail-block">
         <h3>Ferramentas recentes</h3>
         <ul id="detail-tools" class="tools"></ul>
       </section>
+
+      <section id="chat-history" class="detail-block chat-history" hidden>
+        <h3>Conversa pelo painel</h3>
+        <ol id="chat-list" class="chat-list"></ol>
+      </section>
+      <section id="detail-chat" class="chat" aria-labelledby="chat-label" hidden>
+        <form id="chat-form" class="chat-form">
+          <label id="chat-label" for="chat-text" class="chat-label">Mensagem para esta sessão</label>
+          <div class="chat-row">
+            <textarea id="chat-text" class="chat-text" rows="2" maxlength="4000" placeholder="Escreva para esta sessão…"></textarea>
+            <button id="chat-send" class="chat-send" type="submit" disabled>Enviar</button>
+          </div>
+          <p id="chat-note" class="chat-note" role="status"></p>
+          <small class="chat-hint">A sessão recebe como mensagem vinda do painel, não como pedido seu no Mac.</small>
+        </form>
+      </section>
     </article>
+  </dialog>
+
+  <dialog id="launch" class="picker launch" aria-labelledby="launch-title">
+    <div class="picker-card">
+      <header class="picker-head">
+        <div>
+          <h2 id="launch-title">Nova sessão</h2>
+          <p id="launch-sub" class="picker-sub">Abre em segundo plano no Mac. Você acompanha e conversa por aqui.</p>
+        </div>
+        <form method="dialog"><button class="close" aria-label="Fechar">✕</button></form>
+      </header>
+      <form id="launch-form" class="launch-form">
+        <label id="launch-project-row" class="launch-field">Projeto
+          <select id="launch-project" class="launch-input"></select>
+        </label>
+        <label class="launch-field">Nome (opcional)
+          <input id="launch-name" class="launch-input" type="text" maxlength="60" autocomplete="off">
+        </label>
+        <label class="launch-field">O que esta sessão deve fazer?
+          <textarea id="launch-prompt" class="launch-input" rows="4" maxlength="4000"></textarea>
+        </label>
+        <button id="launch-submit" class="launch-submit" type="submit" disabled>Abrir sessão</button>
+        <p id="launch-feedback" class="act-note" role="status"></p>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog id="settings" class="picker settings" aria-labelledby="settings-title">
+    <div class="picker-card">
+      <header class="picker-head">
+        <div>
+          <h2 id="settings-title">Ajustes</h2>
+          <p class="picker-sub">Valem para este Mac. Desligados, os botões nem aparecem.</p>
+        </div>
+        <form method="dialog"><button class="close" aria-label="Fechar">✕</button></form>
+      </header>
+      <div id="settings-list" class="settings-list"></div>
+      <p id="settings-readonly" class="settings-readonly" hidden>Para mudar, abra o painel no Mac.</p>
+      <p class="settings-warning">Com isto ligado, quem tiver o link do painel também pode mandar pedidos às suas sessões, não só aprovar. Não compartilhe o link.</p>
+      <p id="settings-feedback" class="act-note" role="status"></p>
+    </div>
+  </dialog>
+
+  <dialog id="archived" class="picker" aria-labelledby="archived-title">
+    <div class="picker-card">
+      <header class="picker-head">
+        <div>
+          <h2 id="archived-title">Sessões arquivadas</h2>
+          <p class="picker-sub">Ficam fora dos quadros e do mapa (só no painel). Voltam sozinhas se pedirem algo a você.</p>
+        </div>
+        <form method="dialog"><button class="close" aria-label="Fechar">✕</button></form>
+      </header>
+      <ul id="archived-list" class="archived-list"></ul>
+    </div>
   </dialog>
 
   <script type="module" src="app.js"></script>

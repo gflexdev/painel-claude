@@ -18,8 +18,13 @@ Sessões do Claude Code ──hooks──▶ servidor no Mac (127.0.0.1:7777) �
 | `src/permissions.js`, `src/questions.js` | Fila de pedidos de permissão, pergunta e plano, e validação das respostas. |
 | `src/usage.js` | Uso do plano (`rate_limits`) recebido pela status line. |
 | `src/remote.js` | Entrada autenticada das outras máquinas (VPS). |
-| `hooks/` | Scripts que o Claude Code chama: `enviar-evento.sh`, `permissao.sh`, `statusline.sh`, `enviar-uso.sh`. |
-| `public/` | O painel web (PWA): grade, detalhe, barra de uso, estilos de personagem. |
+| `src/background.js` | Stop com trabalho em segundo plano: a sessão continua "rodando". |
+| `src/discover.js` | Sessões já abertas, pelo `claude agents --json`. |
+| `src/panel-data.js` | O que é só do painel: arquivadas e sessões abertas por ele (`painel.json`). |
+| `src/actions.js` | Rotas de ação: arquivar, Ajustes, mensagem, abrir, fechar e apagar. |
+| `src/chat.js`, `src/control.js` | Fila das mensagens para as sessões; `claude --bg`, `stop` e `rm`. |
+| `hooks/` | Scripts que o Claude Code chama: `enviar-evento.sh`, `permissao.sh`, `esperar-mensagem.sh`, `statusline.sh`, `enviar-uso.sh`. |
+| `public/` | O painel web (PWA): quadros, grade, mapa, detalhe, Ajustes, barra de uso, estilos de personagem. |
 | `scripts/` | Instalação no Mac e na VPS, ícones e empacotamento. |
 | `widget-mac/` | Widget do macOS (SwiftUI + WidgetKit). Veja o [README dele](../widget-mac/README.md). |
 | `firmware/` | Display ESP32 de bancada (LVGL). Veja o [README dele](../firmware/README.md). |
@@ -33,12 +38,15 @@ O instalador acrescenta em `~/.claude/settings.json`:
   StopFailure, PreCompact, SessionEnd, SubagentStart e SubagentStop. Faz um `curl` para `POST /hook` com timeout de 1 s e sai sempre com 0:
   com o servidor fora do ar, o Claude não percebe.
 - `hooks/permissao.sh` em PermissionRequest (timeout de 600 s). Veja abaixo.
+- `hooks/esperar-mensagem.sh` em SessionStart e Stop, com `asyncRewake: true` e timeout de 12 h. É a entrega das
+  mensagens do painel (veja [Mensagens para a sessão](#mensagens-para-a-sessão)). Fica sempre instalado; com o
+  ajuste desligado, o painel o dispensa na hora.
 - `hooks/statusline.sh` como status line. Repassa o JSON a `hooks/enviar-uso.sh` (no máximo uma vez por minuto,
   em segundo plano) e chama a status line que a pessoa já tinha. O comando original fica em
   `~/.config/painel-claude/statusline-original.cmd`, e o `desinstalar.sh` devolve a configuração de antes.
 
-`/hook`, `/permission` e `/usage` só aceitam pedidos do próprio Mac (127.0.0.1, sem cabeçalhos de proxy). O que
-chega pelo `tailscale serve` é recusado.
+`/hook`, `/permission`, `/usage` e `/chat/wait` só aceitam pedidos do próprio Mac (127.0.0.1, sem cabeçalhos de
+proxy). O que chega pelo `tailscale serve` é recusado.
 
 ## Aprovar permissão, pergunta e plano
 
@@ -64,12 +72,39 @@ toda ferramenta usada dentro do subagente (PreToolUse, PostToolUse, PermissionRe
 da chamada à ferramenta Agent que precedeu o `SubagentStart` do mesmo tipo. A sessão mãe fica "delegando" e o
 detalhe diz qual subagente está fazendo o quê. Um pedido de permissão de subagente leva `agentType`.
 
+## Trabalho em segundo plano
+
+O Stop traz `background_tasks` (documentado em code.claude.com/docs/en/hooks, "Stop input"): o que ainda está em
+andamento e vai acordar a sessão. Com algo lá que não terminou, a sessão fica `working` com `detail` "em segundo
+plano: …" (`src/background.js`) e não vira "terminou · ver". Sem o campo (versões antigas), valem duas reservas:
+subagentes ainda ativos que deram sinal nos últimos 15 min e comandos Bash com `run_in_background` lançados no
+turno. Com a lista presente e vazia, vale ela: terminou. Quem espera em segundo plano não fica `stale`.
+
+## Sessões já abertas (`claude agents --json`)
+
+A cada 60 s o servidor roda `claude agents --json` (documentado: "Print active sessions (interactive and
+background) as a JSON array and exit"), por `execFile`, sem shell, com o stdin fechado e timeout de 20 s. De cada
+item usa `sessionId`, `cwd`, `kind`, `name`, `status` (`idle` ou `busy`), `startedAt` e, nas de segundo plano, o
+id curto (`id`) que `claude stop` e `claude rm` aceitam. Sessão desconhecida entra como `adopted`, com o nome e a
+pasta (`busy` = rodando; senão parada) e o transcript, se existir em `~/.claude/projects`. Até chegar o primeiro
+hook ela segue o status da lista; se sumir da lista, encerra. Sessão que já fala por hook não é tocada. A sonda do
+`/usage` roda numa pasta só dela e fica de fora. O painel não lê `~/.claude/sessions`. O caminho do `claude` é o
+mesmo da sonda (`claudeBin` no `config.json` ou os lugares de sempre). `PAINEL_DESCOBRIR=0` desliga.
+
+## Arquivar no painel
+
+`POST /api/sessions/:id/archive` e `/unarchive` guardam o id em `~/.config/painel-claude/painel.json` (modo 600,
+escrita atômica, até 500 ids, só ids `[\w-]{1,80}`). O app do Claude não é tocado. A sessão continua em
+`/api/sessions`, com `archived: true`; o painel web a esconde dos quadros, da grade e do mapa, menos quando ela
+espera você. O mesmo arquivo guarda as sessões abertas pelo painel (id curto e sessão mãe).
+
 ## Sessões filhas (app do Claude)
 
 O app do Claude no Mac guarda um arquivo por sessão em
 `~/Library/Application Support/Claude/claude-code-sessions/<conta>/<org>/local_<id>.json`. `src/app-links.js` lê
-dali só `cliSessionId` (o id dos hooks), `priorCliSessionIds`, `spawnedFrom.sessionId` e `startChain.depth`, e só
-dos arquivos mexidos nas últimas 24 h (mais o arquivo da mãe, se for mais antigo). Relê a cada 20 s, só o que
+dali só `cliSessionId` (o id dos hooks), `priorCliSessionIds`, `spawnedFrom.sessionId`, `startChain.depth` e
+`scheduledTaskId` (sessão de tarefa agendada: vira `scheduled: true`), e só dos arquivos mexidos nos últimos 30
+dias (mais o arquivo da mãe, se for mais antigo). Só leitura. Relê a cada 20 s, só o que
 mudou. Não é formato documentado: se mudar, o painel só deixa de agrupar. A pasta pode ser trocada com
 `PAINEL_CLAUDE_APP_DIR`.
 
@@ -90,6 +125,14 @@ porque o `EventSource` não manda cabeçalho.
 | `GET /api/sessions/:id` | detalhe + `summary { lastPrompt, answer, recentTools }` + `permissions[]` com o comando inteiro |
 | `POST /api/permissions/:id` | `{ "decision": "allow" \| "deny", "answers"?: { pergunta: opção \| [opções] \| texto } }`. Token **só no cabeçalho**. Responde 410 se o pedido já foi respondido e 400 se faltar resposta |
 | `POST /api/sessions/:id/seen` | tira o "terminou · ver" da sessão |
+| `POST /api/sessions/:id/archive`, `/unarchive` | arquiva ou desarquiva só no painel. Token **só no cabeçalho** |
+| `GET /api/settings` | `{ features, canChange }`: `canChange` é `true` só no próprio Mac (loopback sem proxy) |
+| `POST /api/settings` | `{ chat?, launch?, closeRemove? }` (booleanos). Token no cabeçalho **e** do próprio Mac; senão 403 |
+| `POST /api/sessions/:id/message` | `{ text }` (até 4000). Ajuste `chat`. 200 `{ status: delivered \| queued }`; 409 se a sessão ainda não ouve o painel |
+| `GET /api/projects` | `{ projects: [{ path, name }], canLaunch }`: pastas de projeto vistas nas sessões. Ajuste `launch` |
+| `POST /api/sessions` | `{ cwd, prompt, name? }` ou `{ parentId, prompt, name? }`. Ajuste `launch`. Roda `claude --bg` |
+| `POST /api/sessions/:id/close`, `/remove` | `claude stop` / `claude rm`, só sessões em segundo plano. Ajuste `closeRemove` |
+| `POST /chat/wait` | entrada do hook do chat; só do próprio Mac |
 | `POST /hook`, `POST /permission`, `POST /usage` | entrada dos hooks e da status line; só do próprio Mac |
 | `POST /remote/hook`, `/remote/permission`, `/remote/transcript` | entrada das outras máquinas (veja abaixo) |
 | `GET /health` | contagem de sessões, sem token |
@@ -112,12 +155,55 @@ Item de `sessions` (enxuto de propósito, para caber num ESP32):
 - Sessão aberta por outra no app do Claude ganha `parentId` (id da mãe) e `depth`. A família se monta na tela
   (`public/families.js`).
 - `permission.agentType` vem preenchido quando o pedido é de um subagente.
+- Campos opcionais, só quando valem: `scheduled: true` (tarefa agendada do app), `archived: true` (arquivada no
+  painel), `background: true` (sessão em segundo plano: dá para fechar e apagar) e `chat: 'ready' | 'busy'` (com o
+  ajuste de mensagens ligado e a sessão ouvindo o painel). Sessão aberta pelo "+ sessão filha" ganha `parentId`.
+- O snapshot leva `features: { chat, launch, closeRemove }`, os Ajustes.
+- O detalhe traz também `lastPromptAt`, `lastChat` (`{ text, at }`, a última mensagem do painel) e `chatHistory`
+  (até 10: `{ id, text, at, status: pending | delivered | dropped }`).
 - `usage` é `{ fiveHour?, sevenDay?: { usedPercentage, resetsAt }, updatedAt, source }`, com os horários em ms;
   `source` é `statusline` ou `app`, e `resetsAt` pode ser `null` quando o reset ainda não é conhecido. O cálculo
   do ritmo fica em `public/pace.js`, puro, para o widget e o ESP32 usarem a mesma conta.
 
 O HTML leva a versão dos arquivos de `public/` (um hash), e cada snapshot também. Quando as duas diferem, a página
 recarrega sozinha, uma vez por versão.
+
+## Ajustes (grupo 2)
+
+`config.json` ganha `features: { chat, launch, closeRemove }`, todos `false` por padrão. O servidor lê na partida
+e muda só por `POST /api/settings`, que pede o token no cabeçalho **e** que o pedido venha do próprio Mac
+(`isLocalHook`: 127.0.0.1 sem cabeçalhos de proxy). O que chega pelo `tailscale serve` ou pela rede é recusado,
+mesmo com o token. Com o ajuste desligado, a rota dele responde 403 "desligado nos Ajustes" e o botão some.
+
+## Mensagens para a sessão
+
+Um mecanismo só, documentado: um hook com `asyncRewake` (code.claude.com/docs/en/hooks, "Run hooks in the
+background"). `hooks/esperar-mensagem.sh` roda em segundo plano em SessionStart e Stop e faz `POST /chat/wait`.
+
+- **Ajuste desligado:** o servidor responde 204 na hora e o hook sai com 0. Nada fica pendurado.
+- **Ajuste ligado:** a conexão fica aberta até chegar uma mensagem. Aí o servidor responde 200 com o texto, o hook
+  o escreve no stderr e sai com 2, e o Claude Code acorda a sessão com ele como lembrete do sistema, mesmo parada.
+  Sessão no meio do turno: a mensagem entra na fila (até 5) e sai no próximo Stop.
+- **Ligar ou desligar:** desligar solta todos os hooks pendurados (204) e descarta a fila. Ligar vale para cada
+  sessão a partir do próximo Stop ou SessionStart dela, que é quando o hook roda de novo; por isso o hook fica
+  sempre instalado, e não é preciso rodar o instalador de novo.
+- **Painel fora do ar:** o hook tenta de novo 12 vezes, de 5 em 5 s (um reinício do serviço), e desiste.
+- O Claude Code encerra o hook depois de 12 h (`timeout` do `settings.json`); a sessão volta a ouvir no próximo
+  Stop.
+
+O texto que o Claude lê diz que a mensagem foi digitada pelo usuário no Painel Claude, fora daquela janela, e que
+não vale como resposta a pedido de permissão. Não há outro caminho de entrega (o painel não usa o socket de
+mensagens entre sessões nem lê arquivos internos do Claude Code).
+
+## Abrir, fechar e apagar sessões
+
+- **Abrir:** `claude --bg [--name <nome>] <pedido>` por `execFile`, sem shell, na pasta escolhida, que precisa ser
+  uma das pastas de projeto vistas nas sessões deste Mac. Pedido que começa com `-` ganha um espaço na frente para
+  não virar opção. O id curto que o `claude` imprime ("backgrounded · <id> · …") é ligado à sessão quando ela
+  aparece no `claude agents`; "+ sessão filha" grava também a mãe, e a filha entra na família.
+- **Fechar e apagar:** `claude stop <id>` e `claude rm <id>`, só para sessões abertas pelo painel ou listadas
+  como `kind: "background"` pelo `claude agents --json`. O painel nunca manda sinal a processo nenhum, então
+  sessões do app e do terminal não são fechadas por ele. `rm` apaga também o worktree da sessão.
 
 ## Uso do plano
 
@@ -205,6 +291,18 @@ Regras comuns:
 
 O estilo escolhido fica no `localStorage` do aparelho (`painel-claude-agente`).
 
+## Quadros, grade e mapa
+
+Por aparelho (`localStorage`): o modo (`painel-claude-modo`), as agendadas à vista, os quadros recolhidos e
+fixados, as famílias abertas, o nível do mapa e a largura do painel lateral.
+
+- `public/groups.js` (puro): quadros por projeto e máquina, contadores, largura (`spanOf`: o mínimo de linhas e,
+  com elas, a menor largura) e fixados primeiro (`pinnedFirst`). `visibleSessions` tira as arquivadas e, se
+  pedido, as agendadas, menos quem espera você.
+- `public/orbit.js` (puro): a árvore projeto → sessão → filhas e as posições em leque; `public/orbit-view.js`
+  desenha, com o robô no núcleo. Sem animação com `prefers-reduced-motion`.
+- `public/sheet-resize.js`: largura do painel lateral (arrastar, setas, dois cliques).
+
 ## Desenvolvimento
 
 ```bash
@@ -212,6 +310,8 @@ npm test
 PAINEL_DIR=/tmp/painel-teste PAINEL_PORT=7788 PAINEL_DEBUG=1 npm start
 ```
 
+- `PAINEL_DESCOBRIR=0` desliga a descoberta pelo `claude agents` (útil num painel de teste, para não trazer as
+  suas sessões reais).
 - Com `PAINEL_DEBUG=1`, os eventos vão para `eventos.log`. Nesse log, prompt, `tool_input` e mensagens aparecem
   só como nomes de campos ou tamanho, sem o conteúdo.
 - `bash instalar.sh --aqui` instala usando a própria pasta em vez de copiar.

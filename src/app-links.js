@@ -1,15 +1,19 @@
 // Quem abriu cada sessão, segundo o app do Claude (macOS). O app guarda um arquivo por sessão em
 // ~/Library/Application Support/Claude/claude-code-sessions/<conta>/<org>/local_<id>.json com o id que os hooks
 // mandam (cliSessionId) e, nas sessões abertas por outra, `spawnedFrom.sessionId` e `startChain.depth`.
-// Não é um formato documentado: se mudar ou sumir, o painel só deixa de agrupar as famílias.
+// Também lê `scheduledTaskId`, que marca a sessão criada por uma tarefa agendada do app (só leitura).
+// Não é um formato documentado: se mudar ou sumir, o painel só deixa de agrupar as famílias e de marcar as agendadas.
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
 export const APP_SESSIONS_DIR = process.env.PAINEL_CLAUDE_APP_DIR
   ?? join(homedir(), 'Library', 'Application Support', 'Claude', 'claude-code-sessions');
-/** Só olha arquivos mexidos neste período: o painel esquece sessões paradas há 12 h. */
-const RECENT_MS = 24 * 60 * 60_000;
+/**
+ * Só olha arquivos mexidos neste período. São 30 dias porque sessões de tarefa agendada ficam abertas e paradas
+ * por muito tempo, e o painel precisa saber que são agendadas; cada arquivo é relido só quando muda.
+ */
+const RECENT_MS = 30 * 24 * 60 * 60_000;
 const LOCAL_FILE = /^local_[\w-]{1,80}\.json$/;
 const ID = /^[\w-]{1,80}$/;
 
@@ -27,6 +31,8 @@ export function parseAppSession(json) {
     cliSessionId: json.cliSessionId,
     parentLocalId: isId(parent) && parent !== json.sessionId ? parent : null,
     depth: isId(parent) ? Math.max(depth, 1) : 0,
+    // Sessão criada por uma tarefa agendada do app, e não aberta por você.
+    scheduled: typeof json.scheduledTaskId === 'string' && json.scheduledTaskId !== '',
   };
 }
 
@@ -44,6 +50,11 @@ export function buildLinks(records) {
     record.cliIds.forEach((id) => links.set(id, link));
   }
   return links;
+}
+
+/** Ids de sessão (os dos hooks) das sessões que vieram de tarefa agendada. */
+export function scheduledIds(records) {
+  return new Set(records.filter((r) => r?.scheduled).flatMap((r) => r.cliIds));
 }
 
 async function readRecord(path) {
@@ -72,6 +83,7 @@ async function listFolders(dir) {
 export function createAppLinks({ dir = APP_SESSIONS_DIR, onChange = () => {}, onError = () => {}, now = Date.now } = {}) {
   const cache = new Map(); // caminho → { mtimeMs, record }
   let links = new Map();
+  let scheduled = new Set();
   let signature = '';
 
   async function load(path, mtimeMs) {
@@ -104,8 +116,10 @@ export function createAppLinks({ dir = APP_SESSIONS_DIR, onChange = () => {}, on
         records.push(...recent);
       }
       const next = buildLinks(records);
-      const nextSignature = JSON.stringify([...next].sort());
+      const nextScheduled = scheduledIds(records);
+      const nextSignature = JSON.stringify([[...next].sort(), [...nextScheduled].sort()]);
       links = next;
+      scheduled = nextScheduled;
       if (nextSignature !== signature) {
         signature = nextSignature;
         onChange();
@@ -115,5 +129,10 @@ export function createAppLinks({ dir = APP_SESSIONS_DIR, onChange = () => {}, on
     }
   }
 
-  return { refresh, linkOf: (id) => links.get(id) ?? null, size: () => links.size };
+  return {
+    refresh,
+    linkOf: (id) => links.get(id) ?? null,
+    isScheduled: (id) => scheduled.has(id),
+    size: () => links.size,
+  };
 }

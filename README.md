@@ -12,6 +12,14 @@ computador.
 </p>
 
 <p align="center">
+  <img src="docs/imagens/painel-lateral.png" alt="Quadros por projeto com o detalhe da sessão aberto no painel lateral, com o pedido de permissão e o campo de mensagem" width="100%">
+</p>
+
+<p align="center">
+  <img src="docs/imagens/painel-mapa.png" alt="Modo mapa: projetos em volta do núcleo e sessões em órbita" width="100%">
+</p>
+
+<p align="center">
   <img src="docs/imagens/painel-familia-aberta.png" alt="Painel com uma família aberta: a sessão principal ligada às sessões que ela abriu" width="100%">
 </p>
 
@@ -30,8 +38,13 @@ computador.
 
 **Monitorar**
 
-- Ver todas as sessões numa grade, cada uma com um personagem. O corpo é da sessão, um detalhe tem a cor do
-  projeto e a cor do tile é a situação.
+- Ver todas as sessões de três jeitos, à sua escolha em cada aparelho:
+  - **Quadros:** um quadro por projeto, com quantas sessões há e quantas esperam, rodam ou terminaram. O quadro
+    fica com a borda avermelhada quando algo lá dentro espera você. Dá para recolher e para fixar no começo.
+  - **Grade:** todas as sessões numa grade só, como antes.
+  - **Mapa:** os projetos em volta do robô do painel e as sessões em órbita em volta do projeto.
+- Cada sessão tem um personagem. O corpo é da sessão, um detalhe tem a cor do projeto e a cor do tile é a
+  situação.
 - A ordem é por urgência: primeiro quem espera você, depois erro, depois "terminou · ver", depois rodando e,
   por último, parada.
 - Saber o que cada uma está fazendo agora: lendo, editando, rodando comando, na web, delegando, planejando,
@@ -41,12 +54,20 @@ computador.
   subagente, com o tipo e o que está fazendo. Se o pedido de permissão vier de um subagente, o painel diz qual.
 - **Famílias:** uma sessão que abriu outras no app do Claude vira um quadrado com cartas atrás e uma barrinha
   colorida por sessão de dentro. Um selo vermelho avisa quando alguém de dentro espera você. Tocar no quadrado
-  abre a família ali mesmo, com a sessão principal ligada às filhas.
+  abre a família ali mesmo, com a sessão principal ligada às filhas. Várias famílias podem ficar abertas.
+- **Sessões já abertas** aparecem sozinhas em até 1 minuto, pelo comando `claude agents --json` do próprio Claude
+  Code, sem esperar você mandar algo nelas.
+- **Tarefas agendadas** do app do Claude levam um ⏱. O botão "⏱ N" no topo mostra ou esconde essas sessões.
+- **Trabalho em segundo plano:** uma sessão que terminou o turno mas deixou um comando ou um subagente rodando
+  continua como "rodando" (por exemplo "em segundo plano: servidor de dev"), e não como parada.
+- **Arquivar no painel:** tira uma sessão dos quadros e do mapa sem mexer no app do Claude. Ela volta sozinha se
+  pedir algo a você, e o botão "arquivadas N" no topo lista as arquivadas para trazer de volta.
 
 **Acompanhar**
 
 - Tocar numa sessão e ver o último pedido, a última resposta (com o markdown formatado) e as ferramentas usadas
-  por último.
+  por último. No computador o detalhe abre num painel ao lado, com as sessões ainda à vista; no celular, numa
+  folha que sobe de baixo.
 - Ver o tamanho do contexto em tokens, o modelo, quantos pedidos você fez e há quanto tempo ela está aberta.
 - Ver no detalhe os subagentes (os ativos e os que já terminaram) e as sessões ligadas: quem abriu esta e quem
   ela abriu, cada uma com um toque para abrir.
@@ -61,6 +82,18 @@ computador.
 
 Vale quem responder primeiro: painel, widget ou o diálogo no Mac. Se você responder no Mac, o pedido some do
 painel.
+
+**Agir nas sessões (desligado até você ligar nos Ajustes)**
+
+Três coisas vão além de aprovar e por isso começam desligadas. Cada uma se liga em **Ajustes** (botão ⚙), e
+só pelo painel aberto no próprio Mac:
+
+- **Mandar mensagens às sessões:** um campo "Mensagem para esta sessão" no detalhe. A sessão recebe a mensagem
+  marcada como vinda do painel, mesmo parada, e o detalhe mostra a conversa pelo painel.
+- **Abrir sessões pelo painel:** o botão **+** no topo abre uma sessão nova em segundo plano num projeto que o
+  painel já conhece; "+ sessão filha" no detalhe abre uma na mesma pasta, ligada à sessão de origem.
+- **Fechar e apagar sessões:** só as sessões em segundo plano (abertas pelo painel ou com `claude --bg`).
+  Apagar remove também o worktree da sessão e pede um segundo toque.
 
 **Extras**
 
@@ -104,8 +137,8 @@ painel.
    - **Compilar o widget?** Só aparece se houver Xcode e XcodeGen.
 4. No fim, o instalador mostra o **link com o seu token**, algo como `http://127.0.0.1:7777/?t=…`. Abra no
    navegador do Mac para conferir.
-5. As sessões novas aparecem sozinhas. Sessões que já estavam abertas aparecem no próximo pedido que você fizer
-   nelas. Se alguma não aparecer, feche e abra de novo.
+5. As sessões novas aparecem sozinhas. As que já estavam abertas aparecem em até 1 minuto (o painel pergunta ao
+   `claude agents --json`) e passam a mostrar tudo no próximo pedido que você fizer nelas.
 
 ### O que o instalador muda no seu Mac
 
@@ -166,17 +199,31 @@ O Tailscale cria uma rede privada entre os seus aparelhos. O painel continua vis
 - **Cores dos tiles:** âmbar = rodando, vermelho = esperando você, azul listrado = terminou e você ainda não viu,
   verde = parada, roxo = erro.
 - **Tocar num tile:** abre o detalhe da sessão. Se ela estava em "terminou · ver", passa para vista.
+- **Modos de ver:** Quadros, Grade e Mapa ficam no topo. Cada aparelho lembra o seu.
+- **Quadros:** a seta recolhe o quadro (recolhido, ele mostra uma barrinha por sessão); o pino ⌖ fixa o quadro
+  no começo e ocupa a linha toda. O mesmo pino destaca o projeto no mapa. Os dois valem por aparelho.
+- **Mapa:** "mostrar até" escolhe projetos, sessões ou também as filhas; − e + dão zoom; "caber na tela" volta a
+  mostrar tudo. Arraste para mover; pinça ou ctrl + roda para zoom. Tocar numa sessão abre o detalhe; tocar num
+  projeto aproxima.
+- **Detalhe ao lado:** no computador (tela de 900 px ou mais), o detalhe abre à direita e a sessão aberta ganha um
+  anel claro. Arraste a borda esquerda do painel para mudar a largura (ou use as setas com ela em foco; dois
+  cliques voltam ao padrão). Esc fecha.
 - **Pedido pendente:** o detalhe mostra um cartão com o comando inteiro (ou a pergunta, ou o plano) e os
   botões. Depois de responder, o Claude segue na hora.
+- **Último pedido · pelo painel:** quando o pedido mais recente foi uma mensagem mandada pelo painel, o detalhe
+  mostra ela, com essa marca.
+- **⏱ N** no topo: mostra ou esconde as sessões de tarefa agendada. **arquivadas N**: lista as arquivadas no
+  painel, para abrir ou desarquivar. Quem espera você aparece sempre, arquivada ou escondida.
 - **Barra de uso, no topo:** o risco branco marca onde você deveria estar agora para gastar 100% até o reset. A
   frase embaixo diz o que fazer: usar mais (azul), manter (verde) ou segurar (vermelho).
 - **Família fechada:** o quadrado com cartas atrás. Cada barrinha embaixo é uma sessão de dentro, na cor da
   situação dela (a vermelha brilha), e o número no canto diz quantas esperam você.
 - **Família aberta:** tocar no quadrado abre a família no lugar, ocupando a linha: a principal, a linha até as
   filhas ("↳ sessão filha") e as etiquetas dos subagentes. Tocar num quadrado de dentro abre o detalhe;
-  "fechar ▴" volta ao quadrado. Só uma família fica aberta por vez.
+  "fechar ▴" volta ao quadrado. Várias famílias podem ficar abertas, e o aparelho lembra quais.
 - **◇ Subagentes:** losangos roxos na faixa do quadrado; dentro da família aberta, etiquetas com o que cada um faz.
 - **Estilo do personagem:** o botão com o bonequinho, ao lado do relógio.
+- **Ajustes:** o botão ⚙. No celular a janela só mostra como está, com o aviso "Para mudar, abra o painel no Mac".
 - **Mac fora do ar:** uma faixa vermelha no topo diz há quanto tempo o painel não tem notícia do Mac.
 
 ## Segurança
@@ -185,6 +232,10 @@ O Tailscale cria uma rede privada entre os seus aparelhos. O painel continua vis
   mande o seu link para ninguém, nem em print.
 - Cada pessoa instala no próprio Mac e tem o próprio token, gerado na instalação.
 - Nada sai do seu Mac. O painel não usa servidor externo, e o Tailscale só liga os seus aparelhos.
+- **Ajustes desligados por padrão.** Mandar mensagens, abrir e fechar sessões ficam desligados até você ligar,
+  e só dá para ligar pelo painel aberto no próprio Mac (`http://127.0.0.1:7777`). Pelo celular, pelo Tailscale ou
+  pela rede, o pedido para mudar os Ajustes é recusado, mesmo com o token. Com eles ligados, quem tiver o link
+  também pode mandar pedidos às suas sessões.
 - Para trocar o token (se ele vazar): apague a linha `"token"` de `~/.config/painel-claude/config.json` e rode
   `bash instalar.sh` de novo. Ele gera outro, e os aparelhos vão pedir o link novo.
 
@@ -236,8 +287,30 @@ O vínculo de "sessão filha" vem do app do Claude no Mac. Sessões abertas no t
 abriu, então aparecem soltas. Se a sessão mãe já saiu do painel, a filha aparece solta com "↳ sessão filha".
 
 **Uma sessão não aparece.**
-As sessões que já estavam abertas antes da instalação aparecem no próximo pedido que você fizer nelas. Se não
-aparecer, feche e abra a sessão.
+As sessões já abertas aparecem em até 1 minuto, pelo `claude agents --json`. Se o painel não acha o `claude`
+(o instalador avisa), elas aparecem no próximo pedido que você fizer nelas. Se mesmo assim não aparecer, feche e
+abra a sessão. Veja também se ela não está arquivada no painel ("arquivadas N" no topo) ou se é de tarefa
+agendada com o ⏱ desligado.
+
+**O que os Ajustes ligam, e é seguro?**
+Os três ajustes deixam o painel agir nas sessões, não só aprovar, e por isso começam desligados:
+
+- **Mandar mensagens:** a mensagem chega à sessão como um aviso marcado "digitado no Painel Claude, fora desta
+  janela". Ela não conta como aprovação de permissão: a sessão continua pedindo permissão como sempre.
+- **Abrir sessões:** roda `claude --bg` numa pasta de projeto que o painel já viu numa sessão sua. Não dá para
+  escolher outra pasta.
+- **Fechar e apagar:** usa `claude stop` e `claude rm`, só em sessões em segundo plano. O painel nunca encerra
+  uma sessão do app ou do terminal. Apagar remove também o worktree da sessão.
+
+Só o painel aberto no próprio Mac muda os Ajustes. Desligar volta tudo ao que era: os botões somem e o servidor
+recusa esses pedidos com "desligado nos Ajustes".
+
+**Liguei as mensagens e a sessão diz que "ainda não está ouvindo o painel".**
+A sessão passa a ouvir o painel no fim do próximo turno dela (ou quando é aberta de novo). Mande um pedido
+qualquer pelo Mac, ou espere ela terminar o que está fazendo.
+
+**Arquivar no painel arquiva no app do Claude?**
+Não. Arquivar vale só para o painel: a sessão some dos quadros e do mapa, e o app do Claude fica como estava.
 
 **Uma sessão fechada continua "rodando".**
 Às vezes o Claude fecha sem avisar. Depois de 15 min sem notícia, o tile mostra "sem sinal há …", e a sessão sai
@@ -292,6 +365,7 @@ Como funciona e as regras de segurança: [docs/tecnico.md](docs/tecnico.md#sess�
 - **Windows:** hooks em PowerShell e instalador próprio.
 - **Estilos de personagem também no widget e no ESP32.**
 - **Subagentes e famílias também no widget e no ESP32.**
+- **Mensagens para sessões de outra máquina (VPS).**
 
 ## Licença
 

@@ -5,6 +5,15 @@ import { activityOf, clip, describeTool } from './tools.js';
 const MAX_KEPT = 8;
 const MAX_PENDING = 8;
 const AGENT_TOOLS = new Set(['Agent', 'Task']);
+/** Subagente sem nenhum evento há esse tempo provavelmente morreu sem avisar; a sessão não espera mais por ele. */
+const AWAIT_MS = 15 * 60_000;
+
+/**
+ * Subagentes pelos quais a sessão ainda espera quando o turno dela acaba (rodando em segundo plano):
+ * os que não terminaram e deram sinal há pouco.
+ */
+export const awaitedSubagents = (session, now) => activeSubagents(session)
+  .filter((a) => now - (a.lastEventAt ?? a.startedAt) < AWAIT_MS);
 
 /** Ainda rodando ou esperando, do mais recente para o mais antigo. */
 export const activeSubagents = (session) => recentSubagents(session).filter((a) => a.status !== 'done');
@@ -26,7 +35,7 @@ function startAgent(session, event, now) {
   const request = index >= 0 ? pending[index] : null;
   const agent = {
     id: event.agent_id, type, description: request?.description ?? '',
-    status: 'working', detail: 'começando', activity: 'think', startedAt: now, endedAt: null,
+    status: 'working', detail: 'começando', activity: 'think', startedAt: now, lastEventAt: now, endedAt: null,
   };
   const others = (session.subagents ?? []).filter((a) => a.id !== agent.id);
   const kept = [agent, ...recentSubagents({ subagents: others })].slice(0, MAX_KEPT);
@@ -36,14 +45,16 @@ function startAgent(session, event, now) {
   };
 }
 
-function updateAgent(session, agentId, change) {
+function updateAgent(session, agentId, change, now) {
   const list = session.subagents ?? [];
   if (!list.some((a) => a.id === agentId)) return {};
-  return { subagents: list.map((a) => (a.id === agentId ? { ...a, ...change } : a)) };
+  return { subagents: list.map((a) => (a.id === agentId ? { ...a, ...change, lastEventAt: now } : a)) };
 }
 
-const closeAll = (session, now) => ({
-  subagents: (session.subagents ?? []).map((a) => (a.status === 'done' ? a : { ...a, status: 'done', endedAt: now })),
+/** Fecha os subagentes ainda abertos, menos os de `keep` (ids). */
+const closeAll = (session, now, keep = new Set()) => ({
+  subagents: (session.subagents ?? [])
+    .map((a) => (a.status === 'done' || keep.has(a.id) ? a : { ...a, status: 'done', endedAt: now })),
   pendingAgents: [],
 });
 
@@ -55,21 +66,24 @@ export function subagentPatch(session, event, now) {
     case 'SubagentStart':
       return agentId ? startAgent(current, event, now) : {};
     case 'SubagentStop':
-      return agentId ? updateAgent(current, agentId, { status: 'done', activity: null, detail: 'terminou', endedAt: now }) : {};
+      return agentId ? updateAgent(current, agentId, { status: 'done', activity: null, detail: 'terminou', endedAt: now }, now) : {};
     case 'PreToolUse':
       if (agentId) {
         return updateAgent(current, agentId, {
           status: 'working', detail: describeTool(event.tool_name, event.tool_input), activity: activityOf(event.tool_name),
-        });
+        }, now);
       }
       return AGENT_TOOLS.has(event.tool_name) ? rememberRequest(current, event) : {};
     case 'PostToolUse':
-      return agentId ? updateAgent(current, agentId, { status: 'working', detail: 'pensando', activity: 'think' }) : {};
+      return agentId ? updateAgent(current, agentId, { status: 'working', detail: 'pensando', activity: 'think' }, now) : {};
     case 'PermissionRequest':
       return agentId
-        ? updateAgent(current, agentId, { status: 'waiting', detail: `permissão: ${describeTool(event.tool_name, event.tool_input)}` })
+        ? updateAgent(current, agentId, { status: 'waiting', detail: `permissão: ${describeTool(event.tool_name, event.tool_input)}` }, now)
         : {};
     case 'Stop':
+      // O turno acabou, mas subagentes em segundo plano continuam: esses ficam abertos.
+      if (agentId) return {};
+      return closeAll(current, now, new Set(awaitedSubagents(current, now).map((a) => a.id)));
     case 'StopFailure':
     case 'SessionEnd':
       return agentId ? {} : closeAll(current, now);
@@ -101,6 +115,18 @@ export function parentPatchFromAgent(session, event) {
     default:
       return {};
   }
+}
+
+/**
+ * O turno da sessão acabou com subagentes ainda rodando em segundo plano: ela não terminou, está esperando
+ * por eles (o Claude Code a acorda quando voltam). null = não espera ninguém.
+ */
+export function awaitingPatch(session, event, now) {
+  if (event.hook_event_name !== 'Stop' || event.agent_id) return null;
+  const awaited = awaitedSubagents(session, now);
+  if (!awaited.length) return null;
+  const who = awaited.length === 1 ? `o subagente ${awaited[0].type}` : `${awaited.length} subagentes`;
+  return { status: 'working', activity: 'delegate', detail: `aguardando ${who}`, awaiting: true };
 }
 
 /** Versão enxuta para as telas. */

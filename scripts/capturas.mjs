@@ -147,12 +147,14 @@ await sleep(22_000);
 const browser = await chromium.launch({ executablePath: CHROME, headless: true });
 const url = (hash = '') => `${BASE}/?t=${TOKEN}${hash}`;
 
-async function shot(name, { width, height, scale, hash = '', style = 'robo', action }) {
+async function shot(name, { width, height, scale, hash = '', style = 'robo', view = 'quadros', action }) {
   const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: scale, colorScheme: 'dark' });
-  await context.addInitScript((s) => { try { localStorage.setItem('painel-claude-agente', s); } catch {} }, style);
+  await context.addInitScript(([s, v]) => {
+    try { localStorage.setItem('painel-claude-agente', s); localStorage.setItem('painel-claude-modo', JSON.stringify(v)); } catch {}
+  }, [style, view]);
   const page = await context.newPage();
   await page.goto(url(hash));
-  await page.waitForSelector('.tile');
+  await page.waitForSelector(view === 'mapa' ? '#orbit:not([hidden])' : '.tile');
   await sleep(1200);
   // Relógio fixo para as capturas não mostrarem a hora real.
   await page.evaluate(() => { const c = document.getElementById('clock'); if (c) c.textContent = '14:32'; });
@@ -167,15 +169,25 @@ async function shot(name, { width, height, scale, hash = '', style = 'robo', act
   console.log('ok', name);
 }
 
-await shot('painel.png', { width: 1280, height: 820, scale: 1.5 });
+// Ajustes do grupo 2 ligados só na demonstração (do próprio Mac, como exige o servidor).
+await fetch(`${BASE}/api/settings`, { method: 'POST', headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ chat: true, launch: true, closeRemove: true }) });
+await shot('painel.png', { width: 1440, height: 900, scale: 1.5 });
+await shot('painel-lateral.png', { width: 1440, height: 900, scale: 1.5, hash: '#sessao=demo-deploy' });
+await shot('painel-mapa.png', { width: 1440, height: 900, scale: 1.5, view: 'mapa' });
+await shot('ajustes.png', { width: 1100, height: 760, scale: 1.5, action: async (page) => {
+  await page.click('#settings-button');
+  await sleep(500);
+} });
+await shot('celular-quadros.png', { width: 390, height: 844, scale: 2 });
 const openFamily = async (page) => {
   await page.click('.tile[data-family]');
   await sleep(600);
   await page.evaluate(() => window.scrollTo(0, 0));
 };
-await shot('painel-familia-aberta.png', { width: 1280, height: 1000, scale: 1.5, action: openFamily });
+await shot('painel-familia-aberta.png', { width: 1280, height: 1000, scale: 1.5, view: 'grade', action: openFamily });
 await shot('celular-familia-fechada.png', { width: 390, height: 844, scale: 2 });
-await shot('celular-familia-aberta.png', { width: 390, height: 844, scale: 2, action: async (page) => {
+await shot('celular-familia-aberta.png', { width: 390, height: 844, scale: 2, view: 'grade', action: async (page) => {
   await page.click('.tile[data-family]');
   await sleep(600);
   await page.evaluate(() => document.querySelector('.family-open')?.scrollIntoView({ block: 'center' }));
