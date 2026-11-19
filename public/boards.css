@@ -47,9 +47,11 @@
 /* ---------- quadros por projeto ---------- */
 .grid[hidden] { display: none; }
 .grid-ruler { height: 0; visibility: hidden; overflow: hidden; }
-.grid[data-grouped] { grid-auto-flow: row dense; align-items: start; }
+.grid[data-grouped] { grid-auto-flow: row dense; align-items: stretch; }
 .group {
   grid-column: span var(--span, 1);
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   padding: 0 0 4px;
   border: 1px solid var(--line);
@@ -63,11 +65,11 @@
 .group-bar { display: flex; align-items: center; }
 .group-head {
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
   flex: 1;
   min-width: 0;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 12px;
+  gap: 5px;
   padding: 12px 14px;
   border: 0;
   background: none;
@@ -88,7 +90,9 @@
   transition: transform 160ms var(--ease-out);
 }
 .group[data-collapsed] .group-chevron { transform: rotate(-45deg); margin-bottom: 0; }
-.group-name { margin: 0; min-width: 0; font: 700 16px/1.2 var(--font-display); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.group-line { display: flex; align-items: center; gap: 8px 10px; min-width: 0; height: 20px; white-space: nowrap; overflow: hidden; }
+.group-meta { height: 16px; padding-left: 15px; }
+.group-name { margin: 0; min-width: 0; font: 700 16px/1.2 var(--font-display); letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .group-head .machine {
   padding: 0 5px; border: 1px solid currentColor; border-radius: 4px;
   font-size: 10px; font-weight: 600; color: var(--ink-dim);
@@ -97,7 +101,9 @@
 .group-total, .group-scheduled { font-size: 11px; color: var(--ink-faint); white-space: nowrap; }
 .group-bars { gap: 4px; }
 .group-bars .strip-bar { width: 12px; height: 6px; border-radius: 3px; }
-.group-counts { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-left: auto; font-size: 11px; font-weight: 600; }
+.group-counts { display: flex; flex: none; gap: 10px; margin-left: auto; font-size: 11px; font-weight: 600; }
+/* Sem espaço, quem encolhe é o "N sessões"; os contadores ficam inteiros. */
+.group-meta .group-total, .group-meta .group-scheduled { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .group-count { color: var(--c, var(--ink-faint)); white-space: nowrap; }
 .group-count[data-status='waiting'] { --c: var(--waiting); }
 .group-count[data-status='error'] { --c: var(--error); }
@@ -125,6 +131,11 @@
   padding: 0 14px 10px;
 }
 .group-grid[hidden] { display: none; }
+/* Quadrados todos da mesma altura, na grade e nos quadros; a família desconta as cartas de trás. */
+:root { --tile-h: 176px; }
+.grid > .tile, .group-grid > .tile { height: var(--tile-h); min-height: 0; }
+.grid > .tile[data-family], .group-grid > .tile[data-family] { height: calc(var(--tile-h) - 12px); }
+.family-open .tile { height: auto; }
 
 /* celular: quadros empilhados na largura toda, duas colunas de quadrados dentro */
 @media (max-width: 720px) {
@@ -138,6 +149,8 @@
   .group-head { padding: 10px 12px; gap: 6px 8px; }
   .group-name { font-size: 15px; }
   .group-total { display: none; }
+  /* no celular as cartas de trás da família ocupam 8 px, não 12 */
+  .grid > .tile[data-family], .group-grid > .tile[data-family] { height: calc(var(--tile-h) - 8px); }
   .top-btn:not(.square) { padding: 0 8px; font-size: 11px; }
 }
 

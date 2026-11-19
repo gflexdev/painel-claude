@@ -25,7 +25,12 @@ export function createBoard(key, { onToggle, onPin }) {
   const bars = el('span', 'strip-marks group-bars');
   bars.setAttribute('aria-hidden', 'true');
   const counts = el('span', 'group-counts');
-  head.append(chevron, title, machine, total, scheduled, bars, counts);
+  // Duas linhas fixas: nome em cima; sessões e contadores embaixo. Assim todo cabeçalho tem a mesma altura.
+  const line1 = el('span', 'group-line');
+  line1.append(chevron, title, machine);
+  const line2 = el('span', 'group-line group-meta');
+  line2.append(total, scheduled, bars, counts);
+  head.append(line1, line2);
   const pin = el('button', 'group-pin');
   pin.type = 'button';
   pin.append(el('span', 'group-pin-mark', '⌖'));
