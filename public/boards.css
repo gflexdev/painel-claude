@@ -40,6 +40,7 @@
 .top-btn.launch { border-color: #343a4a; background: var(--tile-hi); color: var(--ink); font: 700 18px/1 var(--font-display); }
 .top-btn:hover { border-color: var(--ink-faint); color: var(--ink); }
 .top-btn:focus-visible { outline: 2px solid var(--unseen); outline-offset: 2px; }
+.top-btn .short { display: none; }
 #scheduled-button[aria-pressed='true'] { color: #d6d3cc; }
 #scheduled-button[aria-pressed='false'] { color: var(--ink-faint); text-decoration: line-through; }
 .scheduled-mark { color: var(--unseen); }
@@ -136,38 +137,3 @@
 .grid > .tile, .group-grid > .tile { height: var(--tile-h); min-height: 0; }
 .grid > .tile[data-family], .group-grid > .tile[data-family] { height: calc(var(--tile-h) - 12px); }
 .family-open .tile { height: auto; }
-
-/* celular: quadros empilhados na largura toda, duas colunas de quadrados dentro */
-@media (max-width: 720px) {
-  .view-switch { order: 4; margin-left: 0; }
-  .view-switch button { min-height: 30px; padding: 0 9px; font-size: 11px; }
-  .counters { order: 3; width: auto; flex: 1; }
-}
-@media (max-width: 520px) {
-  .group { grid-column: 1 / -1; }
-  .group .group-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 0 10px 8px; }
-  .group-head { padding: 10px 12px; gap: 6px 8px; }
-  .group-name { font-size: 15px; }
-  .group-total { display: none; }
-  /* no celular as cartas de trás da família ocupam 8 px, não 12 */
-  .grid > .tile[data-family], .group-grid > .tile[data-family] { height: calc(var(--tile-h) - 8px); }
-  .top-btn:not(.square) { padding: 0 8px; font-size: 11px; }
-}
-
-/* celular: 1ª linha marca + botões e relógio; 2ª os contadores; 3ª o modo de ver, ⏱ e arquivadas.
-   O grupo da direita vira "contents" para cada botão poder ir para a linha certa. */
-@media (max-width: 520px) {
-  .topbar { flex-wrap: wrap; gap: 10px 8px; padding: 12px 12px 10px; }
-  .brand { margin-right: auto; }
-  .brand h1 { font-size: 18px; }
-  .clock-wrap { display: contents; }
-  #launch-button, #settings-button, #style-button, #link, #clock { order: 1; }
-  .style-button { width: 36px; height: 36px; }
-  .clock { font-size: 18px; }
-  .counters { order: 2; width: 100%; flex: none; flex-wrap: nowrap; gap: 12px; overflow: hidden; }
-  .counter { white-space: nowrap; }
-  .counter[data-zero], .counter .long { display: none; }
-  .view-switch { order: 3; }
-  #scheduled-button, #archived-button { order: 4; }
-  #scheduled-button { margin-left: auto; }
-}

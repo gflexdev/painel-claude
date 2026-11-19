@@ -95,7 +95,9 @@ export function createTopbar({ api, onChange, openDetail, onLaunch }) {
       scheduledButton.title = showScheduled ? 'Esconder as sessões de tarefas agendadas' : 'Mostrar as sessões de tarefas agendadas';
       const archived = snapshot.sessions.filter((s) => s.archived).length;
       archivedButton.hidden = archived === 0;
-      archivedButton.textContent = `arquivadas ${archived}`;
+      // No celular a palavra encurta para "arq." (mobile.css esconde a longa).
+      archivedButton.replaceChildren(el('span', 'long', 'arquivadas '), el('span', 'short', 'arq. '), String(archived));
+      archivedButton.setAttribute('aria-label', `${archived} ${archived === 1 ? 'sessão arquivada' : 'sessões arquivadas'} no painel`);
       launchButton.hidden = snapshot.features?.launch !== true;
       if (archivedDialog.open) renderArchived();
     },

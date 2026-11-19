@@ -2,7 +2,7 @@
 // mensagem para a sessão. Em tela larga (≥ 900 px) abre como painel lateral, com a grade visível ao lado;
 // no celular, como folha de baixo.
 import { agentSvg } from './agents.js';
-import { ACTIVITY_WORD, STATUS_WORD, accessoryOf, el, elapsed, tokens } from './format.js';
+import { ACTIVITY_WORD, STATUS_WORD, accessoryOf, el, elapsed, placeOf, tokens } from './format.js';
 import { renderMarkdown } from './markdown.js';
 import { fillAgents, fillLinks } from './detail-links.js';
 import { createChatBox } from './detail-chat.js';
@@ -59,8 +59,12 @@ export function createDetail({
     dialog.dataset.status = data.status;
     $('detail-bot').replaceChildren(agentSvg(agentStyle(), { id: data.id, name: data.name, project: data.project, accessory: accessoryOf(data) }));
     $('detail-name').textContent = data.name;
-    $('detail-meta').textContent = [data.machine, data.scheduled ? '⏱ tarefa agendada' : '', data.archived ? 'arquivada no painel' : '',
-      data.background ? 'segundo plano' : '', data.origin, data.cwd ?? data.project].filter(Boolean).join(' · ');
+    const meta = $('detail-meta');
+    meta.textContent = [data.machine, data.scheduled ? '⏱ tarefa agendada' : '', data.archived ? 'arquivada no painel' : '',
+      data.background ? 'segundo plano' : '', data.origin, placeOf(data)].filter(Boolean).join(' · ');
+    // O caminho inteiro fica no title: na tela, só o projeto e a pasta onde a sessão roda.
+    if (data.cwd) meta.title = data.cwd;
+    else meta.removeAttribute('title');
     $('detail-status').textContent = statusLine(data);
   }
 
@@ -71,7 +75,12 @@ export function createDetail({
       ['pedidos seus', data.turns],
       ['aberta há', data.startedAt ? elapsed(data.startedAt, serverNow()) : null],
     ].filter(([, value]) => value !== null && value !== undefined);
-    $('detail-stats').replaceChildren(...rows.flatMap(([label, value]) => [el('dt', '', label), el('dd', '', String(value))]));
+    // Cada par num div: assim os números quebram linha em vez de rolar de lado.
+    $('detail-stats').replaceChildren(...rows.map(([label, value]) => {
+      const pair = el('div', 'stat');
+      pair.append(el('dt', '', label), el('dd', '', String(value)));
+      return pair;
+    }));
   }
 
   function fillSummary(data, { loading = false } = {}) {
@@ -82,16 +91,43 @@ export function createDetail({
     const promptText = fromPanel ? fromPanel.text : summary.lastPrompt || data.lastPrompt;
     $('detail-prompt-title').textContent = fromPanel ? 'Último pedido · pelo painel' : 'Último pedido';
     const prompt = $('detail-prompt');
+    if (prompt.textContent !== (promptText || 'sem pedido registrado')) collapsePrompt();
     prompt.textContent = promptText || 'sem pedido registrado';
     prompt.classList.toggle('muted', !promptText);
+    syncPromptMore();
     const answer = $('detail-answer');
     if (summary.answer) answer.replaceChildren(renderMarkdown(summary.answer));
     else answer.textContent = loading ? 'carregando…' : 'ainda sem resposta em texto';
     answer.classList.toggle('muted', !summary.answer);
     answer.classList.toggle('md', Boolean(summary.answer));
     const tools = $('detail-tools');
-    tools.replaceChildren(...(summary.recentTools ?? []).map((t) => el('li', '', t)));
+    const recent = summary.recentTools ?? [];
+    tools.replaceChildren(...recent.map((t) => el('li', '', t)));
     if (!tools.children.length) tools.append(el('li', 'muted', 'nenhuma'));
+    $('detail-tools-title').textContent = recent.length ? `Ferramentas recentes · ${recent.length}` : 'Ferramentas recentes';
+  }
+
+  /** Pedido longo fica em poucas linhas; "ver tudo" só aparece quando há o que mostrar. */
+  function collapsePrompt() {
+    $('detail-prompt').removeAttribute('data-open');
+    $('detail-prompt-more').setAttribute('aria-expanded', 'false');
+    $('detail-prompt-more').textContent = 'ver tudo';
+  }
+
+  function syncPromptMore() {
+    requestAnimationFrame(() => {
+      const prompt = $('detail-prompt');
+      const isOpen = prompt.hasAttribute('data-open');
+      $('detail-prompt-more').hidden = !isOpen && prompt.scrollHeight <= prompt.clientHeight + 1;
+    });
+  }
+
+  function togglePrompt() {
+    const prompt = $('detail-prompt');
+    const isOpen = !prompt.hasAttribute('data-open');
+    prompt.toggleAttribute('data-open', isOpen);
+    $('detail-prompt-more').setAttribute('aria-expanded', String(isOpen));
+    $('detail-prompt-more').textContent = isOpen ? 'mostrar menos' : 'ver tudo';
   }
 
   const allAnswered = () => (shown?.questions ?? []).every((q) => {
@@ -257,6 +293,7 @@ export function createDetail({
   }
 
   $('detail-close').addEventListener('click', close);
+  $('detail-prompt-more').addEventListener('click', togglePrompt);
   $('req-allow').addEventListener('click', () => decide('allow'));
   $('req-deny').addEventListener('click', () => decide('deny'));
   // Folha de baixo (modal): tocar fora fecha.

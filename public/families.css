@@ -92,23 +92,6 @@
 }
 .lineage[hidden], .lineage:empty { display: none; }
 
-/* celular: a família aberta vira lista, a principal em cima e as filhas recuadas */
-@media (max-width: 520px) {
-  .tile[data-family] { margin: 0 8px 8px 0; box-shadow: 5px 5px 0 -1px #16181e, 5px 5px 0 0 var(--line), 9px 9px 0 -1px #14161b, 9px 9px 0 0 var(--line); }
-  .strip-bar { width: 12px; height: 6px; }
-  .strip-label { display: none; }
-  .family-open { padding: 12px; }
-  .family-body { display: flex; flex-direction: column; gap: 8px; }
-  .family-link { display: none; }
-  .family-kids { display: flex; flex-direction: column; gap: 8px; margin-left: 16px; padding-left: 12px; border-left: 2px solid #343a4a; }
-  .family-open .tile { min-height: 0; grid-template-columns: 34px 1fr; column-gap: 10px; }
-  .family-open .bot { grid-row: 1 / span 3; margin: 0; }
-  .family-open .detail-line { display: none; }
-  .family-open .agent-chips { grid-column: 2; margin-top: 4px; }
-  .family-open .status-line { flex-direction: row; margin-top: 6px; }
-  .lineage { grid-column: auto; }
-}
-
 /* etiquetas de subagente no tile */
 .agent-chips { display: flex; flex-wrap: wrap; gap: 5px; width: 100%; min-width: 0; margin: 6px 0 0; padding: 0; list-style: none; grid-column: 1 / -1; overflow: hidden; }
 .agent-chips[hidden] { display: none; }

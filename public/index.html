@@ -26,6 +26,7 @@
   <link rel="stylesheet" href="boards.css">
   <link rel="stylesheet" href="panel.css">
   <link rel="stylesheet" href="orbit.css">
+  <link rel="stylesheet" href="mobile.css">
 </head>
 <body>
   <header class="topbar">
@@ -89,8 +90,8 @@
     <div id="detail-resize" class="sheet-resize" role="separator" aria-orientation="vertical" tabindex="0"
       aria-label="Largura do painel: arraste ou use as setas" title="Arraste para mudar a largura; dois cliques voltam ao padrão"></div>
     <article>
-      <span class="sheet-grip" aria-hidden="true"></span>
       <header class="detail-head">
+        <span class="sheet-grip" aria-hidden="true"></span>
         <div id="detail-bot" class="detail-bot" aria-hidden="true"></div>
         <div class="detail-title">
           <h2 id="detail-name"></h2>
@@ -98,8 +99,10 @@
         </div>
         <button id="detail-close" class="close" type="button" aria-label="Fechar">✕</button>
       </header>
-      <p id="detail-status" class="detail-status"></p>
-      <dl id="detail-stats" class="stats"></dl>
+      <div class="detail-summary">
+        <p id="detail-status" class="detail-status"></p>
+        <dl id="detail-stats" class="stats"></dl>
+      </div>
 
       <section id="detail-request" class="request" hidden aria-labelledby="req-title">
         <h3 id="req-title">Pedido de permissão</h3>
@@ -113,23 +116,18 @@
         <p id="req-feedback" class="req-feedback" role="status"></p>
       </section>
 
-      <section id="detail-actions" class="detail-block actions" aria-label="Ações da sessão">
-        <div class="act-row">
-          <button id="act-child" class="act-btn" type="button" hidden>+ sessão filha</button>
-          <button id="act-archive" class="act-btn" type="button">arquivar no painel</button>
-          <button id="act-close" class="act-btn danger" type="button" hidden>fechar sessão</button>
-          <button id="act-remove" class="act-btn danger" type="button" hidden>apagar sessão</button>
-        </div>
-        <p id="act-note" class="act-note" role="status"></p>
-      </section>
-
       <section class="detail-block">
         <h3 id="detail-prompt-title">Último pedido</h3>
         <p id="detail-prompt" class="prompt"></p>
+        <button id="detail-prompt-more" class="more-btn" type="button" aria-controls="detail-prompt" aria-expanded="false" hidden>ver tudo</button>
       </section>
       <section class="detail-block">
         <h3>Última resposta</h3>
         <div id="detail-answer" class="answer"></div>
+      </section>
+      <section id="chat-history" class="detail-block chat-history" hidden>
+        <h3>Conversa pelo painel</h3>
+        <ol id="chat-list" class="chat-list"></ol>
       </section>
       <section id="detail-agents" class="detail-block" hidden>
         <h3>Subagentes</h3>
@@ -139,14 +137,20 @@
         <h3>Sessões ligadas</h3>
         <ul id="detail-links-list" class="link-list"></ul>
       </section>
-      <section class="detail-block">
-        <h3>Ferramentas recentes</h3>
+      <details id="detail-tools-block" class="detail-block tools-block">
+        <summary><h3 id="detail-tools-title">Ferramentas recentes</h3></summary>
         <ul id="detail-tools" class="tools"></ul>
-      </section>
+      </details>
 
-      <section id="chat-history" class="detail-block chat-history" hidden>
-        <h3>Conversa pelo painel</h3>
-        <ol id="chat-list" class="chat-list"></ol>
+      <section id="detail-actions" class="detail-block actions" aria-labelledby="act-title">
+        <h3 id="act-title">Ações</h3>
+        <div class="act-row">
+          <button id="act-child" class="act-btn" type="button" hidden>+ sessão filha</button>
+          <button id="act-archive" class="act-btn" type="button">arquivar no painel</button>
+          <button id="act-close" class="act-btn danger" type="button" hidden>fechar sessão</button>
+          <button id="act-remove" class="act-btn danger" type="button" hidden>apagar sessão</button>
+        </div>
+        <p id="act-note" class="act-note" role="status"></p>
       </section>
       <section id="detail-chat" class="chat" aria-labelledby="chat-label" hidden>
         <form id="chat-form" class="chat-form">
@@ -156,7 +160,6 @@
             <button id="chat-send" class="chat-send" type="submit" disabled>Enviar</button>
           </div>
           <p id="chat-note" class="chat-note" role="status"></p>
-          <small class="chat-hint">A sessão recebe como mensagem vinda do painel, não como pedido seu no Mac.</small>
         </form>
       </section>
     </article>

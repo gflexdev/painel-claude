@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { accessoryOf, elapsed, sessionFromHash, tokens } from '../public/format.js';
+import { accessoryOf, elapsed, placeOf, sessionFromHash, tokens } from '../public/format.js';
 import { botCells, hatFor, seedFrom } from '../public/bot.js';
 
 test('elapsed: agora, segundos, minutos, horas e dias', () => {
@@ -48,4 +48,13 @@ test('sessionFromHash: lê #sessao=<id> do link do widget e recusa o resto', () 
   assert.equal(sessionFromHash('#sessao='), null);
   assert.equal(sessionFromHash('#sessao=../api'), null);
   assert.equal(sessionFromHash(`#sessao=${'a'.repeat(81)}`), null);
+});
+
+test('placeOf: projeto e a pasta só quando ela é outra (worktree), sem o caminho inteiro', () => {
+  assert.equal(placeOf({ cwd: '/Users/x/gflex/painel-claude', project: 'painel-claude' }), 'painel-claude');
+  assert.equal(placeOf({ cwd: '/Users/x/painel-claude/.claude/worktrees/nifty-3866bb', project: 'painel-claude' }), 'painel-claude · nifty-3866bb');
+  assert.equal(placeOf({ cwd: '/Users/x/app/', project: 'app' }), 'app');
+  assert.equal(placeOf({ project: 'app' }), 'app');
+  assert.equal(placeOf({ cwd: '/srv/api' }), 'api');
+  assert.equal(placeOf({}), '');
 });
