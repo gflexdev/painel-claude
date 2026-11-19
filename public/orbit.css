@@ -1,0 +1,206 @@
+/* Modo Mapa: projetos em volta do núcleo (o robô) e sessões em órbita, com zoom e arrasto. */
+.orbit {
+  --t: var(--idle);
+  position: relative;
+  height: 70vh;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: radial-gradient(60% 55% at 50% 46%, #161922 0%, var(--bg) 70%);
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.orbit[hidden] { display: none; }
+.orbit[data-dragging] { cursor: grabbing; }
+
+/* O mundo: tudo aqui dentro usa px do mapa, com o centro em (0, 0); zoom e arrasto são um transform só. */
+.orbit-world { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; }
+
+/* Anéis tracejados das órbitas */
+.orbit-rings { position: absolute; left: 0; top: 0; pointer-events: none; }
+.orbit-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  translate: -50% -50%;
+  border: 1px dashed #22252e;
+  border-radius: 50%;
+}
+
+/* Linhas: a cor é a situação; quem espera você fica mais forte */
+.orbit-links { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+.orbit-links path {
+  --l: var(--idle);
+  fill: none;
+  stroke: var(--l);
+  stroke-width: 2;
+  stroke-opacity: 0.4;
+  stroke-linecap: round;
+}
+.orbit-links path[data-tone='waiting'] { --l: var(--waiting); stroke-opacity: 0.75; }
+.orbit-links path[data-tone='error'] { --l: var(--error); stroke-opacity: 0.6; }
+.orbit-links path[data-tone='unseen'] { --l: var(--unseen); stroke-opacity: 0.55; }
+.orbit-links path[data-tone='working'] { --l: var(--working); stroke-opacity: 0.55; }
+.orbit-links path[data-tone='ended'] { --l: var(--ended); }
+
+/* Núcleo: o robô do painel e o total */
+.orbit-core {
+  --c: var(--working);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 116px;
+  height: 116px;
+  translate: -50% -50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid #343a4a;
+  border-radius: 50%;
+  background: var(--tile);
+  box-shadow: 0 0 60px color-mix(in srgb, var(--c) 18%, transparent);
+}
+.orbit-core[data-tone='waiting'] { --c: var(--waiting); }
+.orbit-core-face { width: 40px; color: var(--c); }
+.orbit-core-face svg { display: block; width: 100%; height: auto; shape-rendering: crispEdges; }
+.orbit-core-face .eye { fill: var(--tile); }
+.orbit-core-count { font-size: 10px; color: var(--ink-dim); }
+
+/* Círculos */
+.orbit-orbs { position: absolute; left: 0; top: 0; }
+.orb {
+  --c: var(--ended);
+  position: absolute;
+  translate: -50% -35px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  transition: left 600ms var(--ease-out), top 600ms var(--ease-out);
+}
+.orb[data-tone='waiting'] { --c: var(--waiting); }
+.orb[data-tone='error'] { --c: var(--error); }
+.orb[data-tone='unseen'] { --c: var(--unseen); }
+.orb[data-tone='working'] { --c: var(--working); }
+.orb[data-tone='idle'] { --c: var(--idle); }
+.orb-disc {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 70px;
+  border: 2px solid var(--c);
+  border-radius: 50%;
+  background: var(--tile);
+}
+.orb[data-depth='3'] .orb-disc, .orb[data-depth='4'] .orb-disc { width: 56px; height: 56px; }
+.orb[data-depth='3'], .orb[data-depth='4'] { translate: -50% -28px; }
+.orb[data-tone='waiting'] .orb-disc { animation: orb-alarm 1.4s ease-in-out infinite; }
+@keyframes orb-alarm {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--waiting) 50%, transparent); }
+  50% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--waiting) 0%, transparent), 0 0 30px color-mix(in srgb, var(--waiting) 45%, transparent); }
+}
+.orb-face { width: 36px; color: var(--c); display: grid; place-items: center; }
+.orb-face svg { display: block; width: 100%; height: auto; shape-rendering: crispEdges; overflow: visible; }
+.orb-face .eye { fill: var(--tile); }
+.orb-face .acc { color: var(--ink-dim); }
+.orb[data-tone='working'] .orb-face svg { animation: bob 0.9s steps(2) infinite; }
+.orb-label { display: flex; flex-direction: column; align-items: center; width: 150px; text-align: center; font-size: 11px; line-height: 1.3; }
+.orb-name { max-width: 100%; font: 700 12px/1.25 var(--font-display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.orb-sub { color: var(--c); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; font-size: 10px; }
+.orb-badge[hidden] { display: none; }
+.orb:hover .orb-disc { background: var(--tile-hi); }
+.orb:focus-visible { outline: none; }
+.orb:focus-visible .orb-disc { outline: 2px solid var(--unseen); outline-offset: 4px; }
+.orb[data-selected] .orb-disc { outline: 2px solid var(--ink); outline-offset: 4px; }
+
+/* Projeto: pílula com o nome e o resumo, sem personagem */
+.orb[data-kind='project'] { translate: -50% -50%; z-index: 2; }
+.orb[data-kind='project'] .orb-disc {
+  width: auto;
+  min-width: 132px;
+  height: 52px;
+  padding: 0 16px;
+  border-width: 1px;
+  border-color: color-mix(in srgb, var(--c) 55%, var(--line));
+  border-radius: 26px;
+  background: #12141a;
+  animation: none;
+}
+.orb[data-kind='project'][data-tone='waiting'] .orb-disc { border-color: #4a2630; }
+.orb[data-kind='project'] .orb-face { display: none; }
+.orb[data-kind='project'] .orb-label { position: absolute; top: 50%; translate: 0 -50%; width: 124px; pointer-events: none; }
+.orb[data-kind='project'] .orb-name { font: 600 12px/1.25 var(--font-mono); }
+.orb[data-kind='project'] .orb-sub { font-weight: 400; text-transform: none; letter-spacing: 0; }
+.orb[data-kind='project'] .orb-badge {
+  position: absolute;
+  right: -6px;
+  top: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--line);
+  color: var(--ink-dim);
+  font: 700 11px/20px var(--font-mono);
+  text-align: center;
+}
+.orb[data-kind='project'][data-pinned] .orb-disc { border-color: var(--working); }
+.orb[data-kind='project'][data-pinned] .orb-badge { background: var(--working); color: #1a1205; }
+
+/* Controles embaixo à esquerda e a dica à direita */
+.orbit-tools {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  max-width: calc(100% - 32px);
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #15171c;
+  cursor: default;
+}
+.orbit-tools-label { font-size: 11px; color: var(--ink-dim); }
+.orbit-levels { display: flex; gap: 4px; }
+.orbit-btn {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--tile-hi);
+  color: var(--ink);
+  font: 12px var(--font-mono);
+  cursor: pointer;
+}
+.orbit-btn.square { width: 32px; padding: 0; font-size: 16px; }
+.orbit-levels .orbit-btn { background: transparent; color: var(--ink-dim); }
+.orbit-levels .orbit-btn[aria-pressed='true'] { border-color: transparent; background: var(--line); color: var(--ink); }
+.orbit-btn:hover { border-color: var(--ink-faint); }
+.orbit-btn:focus-visible { outline: 2px solid var(--unseen); outline-offset: 2px; }
+.orbit-hint { position: absolute; right: 20px; bottom: 22px; margin: 0; font-size: 11px; color: var(--ink-faint); pointer-events: none; }
+
+@media (max-width: 900px) { .orbit-hint { display: none; } }
+@media (max-width: 520px) {
+  .orbit { border-radius: 16px; }
+  .orbit-tools { left: 8px; bottom: 8px; max-width: calc(100% - 16px); padding: 6px 8px; }
+  .orbit-tools-label { display: none; }
+}
+/* Sem animação para quem pediu menos movimento: quem espera você fica com o anel aceso, parado. */
+@media (prefers-reduced-motion: reduce) {
+  .orb { transition: none; }
+  .orb[data-tone='waiting'] .orb-disc { animation: none; box-shadow: 0 0 0 4px color-mix(in srgb, var(--waiting) 35%, transparent); }
+}
