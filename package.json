@@ -1,6 +1,6 @@
 {
   "name": "painel-claude",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "license": "PolyForm-Noncommercial-1.0.0",
   "description": "Painel de bancada que mostra o estado das sessões do Claude Code (tablet hoje, display ESP32 depois).",
