@@ -31,7 +31,7 @@ computador.
   </tr>
 </table>
 
-> **Versão 0.3.0:** quadros por projeto, painel lateral, modo mapa e Ajustes para conversar com as sessões. Funciona só no **macOS** por
+> **Versão 0.3.1:** quadros por projeto, painel lateral, modo mapa e Ajustes para conversar com as sessões. Funciona só no **macOS** por
 > enquanto (veja [Futuro](#futuro)). Baixe a última versão em [Releases](https://github.com/gflexdev/painel-claude/releases/latest).
 
 ## O que dá para fazer
