@@ -4,7 +4,7 @@ import { el } from './format.js';
 
 const $ = (id) => document.getElementById(id);
 const NOTES = Object.freeze({
-  ready: 'Chega na sessão na hora, mesmo com ela parada.',
+  ready: 'Chega na hora, mesmo com ela parada, como mensagem vinda do painel.',
   busy: 'A sessão está no meio de um turno: a mensagem entra na fila e é entregue quando o turno acabar.',
   none: 'Esta sessão ainda não está ouvindo o painel. Ela passa a ouvir no fim do próximo turno (ou ao ser aberta de novo).',
   remote: 'Sessões de outra máquina não recebem mensagens do painel.',

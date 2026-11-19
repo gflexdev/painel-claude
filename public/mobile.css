@@ -1,0 +1,130 @@
+/* ---------- tela estreita e celular ----------
+   Fica por último: tudo o que muda no celular está aqui, num lugar só. */
+
+/* tablet em pé: a barra quebra em duas linhas (marca e botões; contadores e modo de ver) */
+@media (max-width: 720px) {
+  .topbar { flex-wrap: wrap; gap: 10px 16px; }
+  .clock-wrap { margin-left: auto; }
+  .counters { order: 3; flex: 1; width: auto; margin: 0; gap: 14px; }
+  .counter { white-space: nowrap; }
+  .counter[data-zero] { display: none; }
+  .view-switch { order: 4; margin-left: 0; }
+  .view-switch button { min-height: 30px; padding: 0 9px; font-size: 11px; }
+}
+
+/* ---------- celular ---------- */
+@media (max-width: 520px) {
+  /* Barra do topo em duas linhas fixas:
+     1ª: marca, modo de ver e os botões; 2ª: contadores, ⏱ e arquivadas.
+     O relógio some (o celular já mostra a hora) e o nome vira só leitura de tela. */
+  .topbar { flex-wrap: wrap; gap: 8px; padding: 10px 12px 8px; padding-top: max(10px, env(safe-area-inset-top)); }
+  .brand { order: 1; gap: 0; }
+  .brand-mark { margin: 0 8px 0 6px; }
+  .brand h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .clock-wrap { display: contents; }
+  .clock { display: none; }
+  .view-switch { order: 1; margin-right: auto; }
+  .view-switch button { min-height: 30px; padding: 0 9px; font-size: 11px; }
+  #launch-button, #settings-button, #style-button, #link { order: 1; }
+  .top-btn { min-height: 34px; }
+  .top-btn.square { width: 34px; }
+  .style-button { width: 34px; height: 34px; }
+  .topbar::after { content: ''; order: 2; flex-basis: 100%; height: 0; margin-top: -8px; }
+  .counters { order: 3; flex: 1; min-width: 0; margin: 0; gap: 12px; font-size: 12px; flex-wrap: nowrap; overflow: hidden; }
+  .counter { white-space: nowrap; }
+  .counter b { font-size: 17px; }
+  .counter[data-zero], .counter .long, .counter[data-status='idle'] { display: none; }
+  #scheduled-button, #archived-button { order: 4; min-height: 28px; padding: 0 8px; font-size: 11px; }
+  .top-btn .long { display: none; }
+  .top-btn .short { display: inline; }
+
+  main { padding: 10px; }
+
+  /* Uso do plano: uma linha por janela; toque abre o resto. Ritmo estourado fica sempre à vista. */
+  .usage { position: relative; margin: 10px 10px 0; padding: 9px 12px; }
+  .usage-row {
+    grid-template-columns: 52px 1fr auto;
+    grid-template-areas:
+      'label track pct'
+      'note note note'
+      'reset reset reset';
+  }
+  .usage-reset { text-align: left; }
+  .usage:not([data-open]) .usage-list { gap: 8px; }
+  .usage:not([data-open]) :is(.usage-reset, .usage-scoped, .usage-stale) { display: none; }
+  .usage:not([data-open]) .usage-row:not([data-state='over'], [data-state='limit']) .usage-note { display: none; }
+  .usage:not([data-open]) .usage-row { row-gap: 4px; }
+  .usage-more {
+    display: block;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    border: 0;
+    border-radius: inherit;
+    background: none;
+    cursor: pointer;
+  }
+  .usage-more:focus-visible { outline: 2px solid var(--unseen); outline-offset: 2px; }
+
+  /* Quadros: cabeçalho numa linha só (nome à esquerda, contadores à direita). */
+  .group { grid-column: 1 / -1; }
+  .group-head { flex-direction: row; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; }
+  .group-head > .group-line:first-child { flex: 1; }
+  .group-meta { flex: none; height: auto; padding-left: 0; }
+  .group-name { font-size: 15px; }
+  .group-total, .group-scheduled, .group-bars { display: none; }
+  .group-counts { gap: 8px; }
+  .group-pin { width: 28px; height: 28px; margin-right: 10px; font-size: 12px; }
+
+  /* Sessões viram lista: uma linha por sessão, personagem à esquerda, situação e tempo à direita. */
+  .grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .group .group-grid { grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 0 8px 8px; }
+  .grid > .tile, .group-grid > .tile,
+  .grid > .tile[data-family], .group-grid > .tile[data-family] { height: auto; }
+  .tile {
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    grid-template-rows: none;
+    align-items: center;
+    align-content: center;
+    column-gap: 10px;
+    row-gap: 0;
+    min-height: 58px;
+    padding: 9px 12px 9px 14px;
+    border-radius: 12px;
+  }
+  .tile .bot { grid-column: 1; grid-row: 1 / span 4; width: 30px; margin: 0; align-self: center; }
+  .tile .name { grid-column: 2; font-size: 14px; -webkit-line-clamp: 1; }
+  .tile .project { grid-column: 2; margin-top: 2px; }
+  .group-grid .tile .project { display: none; }
+  .tile .detail-line { grid-column: 2; margin-top: 2px; }
+  .tile .status-line {
+    grid-column: 3;
+    grid-row: 1 / span 4;
+    flex-direction: column;
+    align-items: flex-end;
+    align-self: center;
+    gap: 3px;
+    max-width: 36vw;
+    margin: 0;
+    font-size: 11px;
+  }
+  .tile .status-word { max-width: 100%; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.04em; }
+  .tile:not([data-member]) .lineage, .tile .agent-chips { display: none; }
+  .tile .tile-strip { grid-column: 2; margin-top: 5px; padding: 0; background: none; }
+  .strip-bar { width: 12px; height: 6px; }
+  .strip-label { display: none; }
+  /* família fechada: uma carta só atrás, embaixo, e o selo de quem espera no canto do personagem */
+  .tile[data-family] { margin: 0 0 5px; box-shadow: 0 5px 0 -1px #16181e, 0 5px 0 0 var(--line); }
+  .tile-badge { top: 4px; right: auto; left: 30px; min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; line-height: 18px; }
+
+  /* família aberta: a principal em cima e as filhas recuadas */
+  .family-open { padding: 10px; }
+  .family-head { margin-bottom: 10px; }
+  .family-body { display: flex; flex-direction: column; gap: 6px; }
+  .family-link { display: none; }
+  .family-kids { display: flex; flex-direction: column; gap: 6px; margin-left: 12px; padding-left: 10px; border-left: 2px solid #343a4a; }
+  .family-open .tile { min-height: 0; }
+  .family-open .detail-line { display: none; }
+  .family-open .lineage { grid-column: 2; margin-bottom: 3px; font-size: 9px; }
+  .family-open .agent-chips { display: flex; grid-column: 2; margin-top: 4px; }
+}

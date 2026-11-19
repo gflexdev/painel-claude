@@ -1,18 +1,74 @@
-/* ---------- números da sessão ---------- */
-/* dt em cima, dd embaixo, um par por coluna */
+/* ---------- cabeçalho preso no topo: nome e fechar sempre à mão ---------- */
+.detail .detail-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: -18px -20px 0;
+  padding: 14px 20px 12px;
+  border-bottom: 1px solid var(--line);
+  background: #15171c;
+}
+.detail .detail-bot { width: 44px; }
+.detail .detail-title h2 { font-size: 19px; line-height: 1.2; overflow-wrap: anywhere; }
+.detail .detail-meta { margin-top: 4px; word-break: normal; overflow-wrap: anywhere; }
+.detail .close { flex: none; align-self: flex-start; width: 40px; height: 40px; border-radius: 11px; font-size: 16px; }
+.detail .close:hover { border-color: var(--ink-faint); }
+.detail .close:focus-visible { outline: 2px solid var(--unseen); outline-offset: 2px; }
+
+/* ---------- situação e números num cartão só ---------- */
+.detail-summary {
+  margin-top: 14px;
+  padding: 11px 14px 12px;
+  border-left: 4px solid var(--c);
+  border-radius: 0 12px 12px 0;
+  background: var(--tile-hi);
+}
+.detail .detail-status { margin: 0; padding: 0; border: 0; background: none; font-size: 13px; line-height: 1.45; }
 .stats {
-  display: grid;
-  grid-template-rows: auto auto;
-  grid-auto-flow: column;
-  grid-auto-columns: max-content;
-  column-gap: 22px;
-  row-gap: 3px;
-  margin: 12px 0 0;
-  overflow-x: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: 10px 0 0;
 }
 .stats:empty { display: none; }
+.stat { display: grid; gap: 3px; }
 .stats dt { color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; }
-.stats dd { margin: 0; font: 600 15px/1.2 var(--font-mono); color: var(--ink); }
+.stats dd { margin: 0; font: 600 14px/1.2 var(--font-mono); color: var(--ink); }
+
+/* ---------- pedido longo recolhido, ferramentas recolhidas ---------- */
+.prompt:not([data-open]) {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.more-btn {
+  margin-top: 6px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--unseen);
+  font: 600 12px/1 var(--font-mono);
+  cursor: pointer;
+}
+.more-btn[hidden] { display: none; }
+.more-btn:focus-visible { outline: 2px solid var(--unseen); outline-offset: 2px; border-radius: 4px; }
+.tools-block summary { display: flex; align-items: center; gap: 8px; list-style: none; cursor: pointer; }
+.tools-block summary::-webkit-details-marker { display: none; }
+.tools-block summary::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  margin: 14px 0 0;
+  border-right: 2px solid var(--ink-faint);
+  border-bottom: 2px solid var(--ink-faint);
+  transform: rotate(-45deg);
+  transition: transform 160ms var(--ease-out);
+}
+.tools-block[open] summary::after { transform: rotate(45deg); margin-top: 10px; }
+.tools-block summary:hover h3, .tools-block summary:focus-visible h3 { color: var(--ink-dim); }
+.tools-block summary:focus-visible { outline: 2px solid var(--unseen); outline-offset: 2px; border-radius: 4px; }
+.tools-block .tools { margin-top: 4px; }
 
 /* ---------- cartão de pedido: permissão, plano ou pergunta ---------- */
 .request {

@@ -319,23 +319,3 @@ main { padding: clamp(14px, 2vw, 24px); }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .tile[data-status='waiting']::after { opacity: 1; }
 }
-
-@media (max-width: 720px) {
-  .topbar { flex-wrap: wrap; gap: 10px 16px; }
-  .counters { order: 3; width: 100%; margin: 0; gap: 14px; }
-  .clock-wrap { margin-left: auto; }
-}
-
-/* celular: duas colunas compactas, detalhe como folha de baixo */
-@media (max-width: 520px) {
-  main { padding: 12px; }
-  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  .tile { grid-template-columns: 1fr; min-height: 132px; padding: 12px 12px 10px 14px; }
-  .bot { grid-row: auto; width: 34px; margin-bottom: 8px; }
-  .name { font-size: 14px; }
-  .status-line { flex-direction: column; gap: 2px; margin-top: 8px; font-size: 11px; }
-  .counter b { font-size: 18px; }
-  .counters { font-size: 12px; }
-  .detail-bot { width: 44px; }
-  .detail-title h2 { font-size: 18px; }
-}

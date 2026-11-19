@@ -82,5 +82,23 @@ export function renderUsage(container, usage, now) {
   const perModel = scoped.length
     ? [el('p', 'usage-scoped', `limite por modelo: ${scoped.map((s) => `${s.label} ${pct(s.usedPercentage)}`).join(' · ')}`)]
     : [];
-  container.replaceChildren(list, ...perModel, ...stale);
+  container.replaceChildren(list, ...perModel, ...stale, moreButton(container));
+}
+
+/**
+ * Só no celular (mobile.css): a faixa fica numa linha por janela e um toque nela abre o ritmo e o reset.
+ * O estado aberto fica no próprio contêiner, que sobrevive aos redesenhos.
+ */
+function moreButton(container) {
+  const isOpen = container.hasAttribute('data-open');
+  const button = el('button', 'usage-more');
+  button.type = 'button';
+  button.setAttribute('aria-expanded', String(isOpen));
+  button.setAttribute('aria-label', isOpen ? 'Recolher os detalhes do uso' : 'Mostrar os detalhes do uso');
+  button.addEventListener('click', () => {
+    container.toggleAttribute('data-open', !isOpen);
+    container.querySelector('.usage-more')?.replaceWith(moreButton(container));
+    container.querySelector('.usage-more')?.focus();
+  });
+  return button;
 }

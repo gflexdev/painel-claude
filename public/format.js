@@ -58,3 +58,13 @@ const SESSION_HASH = /^#sessao=([\w-]{1,80})(?:&|$)/;
 export function sessionFromHash(hash) {
   return SESSION_HASH.exec(hash ?? '')?.[1] ?? null;
 }
+
+/**
+ * Onde a sessão roda, curto: o projeto e, se a pasta for outra (ex.: worktree), o nome dela.
+ * "/Users/x/painel/.claude/worktrees/nifty-3866bb" no projeto "painel" → "painel · nifty-3866bb".
+ */
+export function placeOf({ cwd, project } = {}) {
+  const folder = (cwd ?? '').replace(/\/+$/, '').split('/').pop() ?? '';
+  if (!folder || folder === project) return project || folder;
+  return project ? `${project} · ${folder}` : folder;
+}
