@@ -12,6 +12,14 @@ computador.
 </p>
 
 <p align="center">
+  <img src="docs/imagens/painel-lateral.png" alt="Quadros por projeto com o detalhe da sessão aberto no painel lateral, com o pedido de permissão e o campo de mensagem" width="100%">
+</p>
+
+<p align="center">
+  <img src="docs/imagens/painel-mapa.png" alt="Modo mapa: projetos em volta do núcleo e sessões em órbita" width="100%">
+</p>
+
+<p align="center">
   <img src="docs/imagens/painel-familia-aberta.png" alt="Painel com uma família aberta: a sessão principal ligada às sessões que ela abriu" width="100%">
 </p>
 
