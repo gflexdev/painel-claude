@@ -72,10 +72,12 @@ export function parseUsageReport(output) {
 
 function runClaude(bin, cwd) {
   return new Promise((resolve, reject) => {
-    execFile(bin, PROBE_ARGS, { cwd, timeout: PROBE_TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024 }, (error, stdout) => {
+    const child = execFile(bin, PROBE_ARGS, { cwd, timeout: PROBE_TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024 }, (error, stdout) => {
       if (error) reject(error);
       else resolve(stdout);
     });
+    // Sem entrada: com o stdin aberto, o `claude -p` espera 3 s por dados e às vezes falha.
+    child.stdin?.end();
   });
 }
 
