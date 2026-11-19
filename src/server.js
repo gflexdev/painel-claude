@@ -3,11 +3,16 @@ import { readFile } from 'node:fs/promises';
 import { timingSafeEqual } from 'node:crypto';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadConfig, DATA_DIR, STATE_FILE, EVENTS_LOG, USAGE_FILE } from './config.js';
+import { loadConfig, saveFeatures, DATA_DIR, STATE_FILE, EVENTS_LOG, USAGE_FILE, PANEL_FILE } from './config.js';
 import { createUsage } from './usage.js';
 import { createAppLinks } from './app-links.js';
 import { createAppUsage } from './app-usage.js';
-import { createUsageProbe } from './usage-probe.js';
+import { createUsageProbe, findClaude } from './usage-probe.js';
+import { createDiscovery, transcriptOf } from './discover.js';
+import { createPanelData } from './panel-data.js';
+import { createChat } from './chat.js';
+import { createControl } from './control.js';
+import { createActionRoutes } from './actions.js';
 import { createStore } from './store.js';
 import { readSummary } from './transcript.js';
 import { toView } from './state.js';
@@ -41,12 +46,34 @@ const MAX_USAGE_BODY = 64 * 1024;
 const PERMISSION_WAIT_MS = 570_000;
 
 const config = loadConfig();
+/** Ajustes (grupo 2): começam como estão no config.json e mudam só por POST /api/settings vindo do Mac. */
+let features = config.features;
 const logError = (context, error) => process.stderr.write(`[painel] ${context}: ${error?.message ?? error}\n`);
 
-/** Sessão aberta por outra no app do Claude: leva o id da sessão mãe e a profundidade. */
+/** Sessão aberta por outra (no app do Claude, ou pelo "+ sessão filha" do painel): leva a mãe e a profundidade. */
 const withParent = (session) => {
-  const link = session.machine ? null : appLinks.linkOf(session.id);
-  return link && link.parentId !== session.id ? { ...session, parentId: link.parentId, depth: link.depth } : session;
+  if (session.machine) return session;
+  const link = appLinks.linkOf(session.id);
+  if (link && link.parentId !== session.id) return { ...session, parentId: link.parentId, depth: link.depth };
+  const parentId = panel.parentOf(session.id);
+  return parentId ? { ...session, parentId, depth: panel.depthOf(session.id) } : session;
+};
+
+/**
+ * Campos que só o painel sabe (todos opcionais, para o widget e o ESP32 seguirem iguais):
+ * scheduled (tarefa agendada do app), archived (arquivada no painel), background (em segundo plano: dá para
+ * fechar e apagar) e chat ('ready' | 'busy', com o ajuste de mensagens ligado).
+ */
+const withPanelFlags = (session) => {
+  if (session.machine) return session;
+  const chatState = chat.stateOf(session.id);
+  const flags = {
+    ...(appLinks.isScheduled(session.id) && { scheduled: true }),
+    ...(panel.isArchived(session.id) && { archived: true }),
+    ...(actions.jobOf(session.id) && { background: true }),
+    ...(chatState && { chat: chatState }),
+  };
+  return Object.keys(flags).length ? { ...session, ...flags } : session;
 };
 
 /** Na grade vai só o essencial do pedido de permissão; o comando inteiro fica no detalhe. */
@@ -56,7 +83,7 @@ const withPermission = (session) => {
     ? { ...session, permission: { id: first.id, kind: first.kind, tool: first.tool, count: rest.length + 1, agentType: first.agentType } }
     : session;
 };
-const decorate = (session) => withPermission(withParent(session));
+const decorate = (session) => withPanelFlags(withPermission(withParent(session)));
 const ASSET_VERSION = assetVersion(PUBLIC_DIR);
 const store = createStore({
   stateFile: STATE_FILE,
@@ -65,7 +92,7 @@ const store = createStore({
   onError: logError,
   decorate,
   version: ASSET_VERSION,
-  extras: () => ({ usage: usage.view() }),
+  extras: () => ({ usage: usage.view(), features }),
 });
 const usage = createUsage({ file: USAGE_FILE, onChange: () => store.notify(), onError: logError });
 const appLinks = createAppLinks({ onChange: () => store.notify(), onError: logError });
@@ -80,6 +107,17 @@ const usageProbe = createUsageProbe({
 });
 /** O app do Claude grava os vínculos e o uso em arquivos próprios; relê de tempos em tempos (só o que mudou). */
 const APP_REFRESH_MS = 20_000;
+const claudeBin = findClaude(config.claudeBin);
+const panel = createPanelData({ file: PANEL_FILE, onChange: () => store.notify(), onError: logError });
+const chat = createChat({ enabled: features.chat, onChange: () => store.notify() });
+const control = createControl({ bin: claudeBin });
+/** Sessões já abertas, pelo `claude agents --json` (a sonda do /usage roda numa pasta só dela e fica de fora). */
+const discovery = createDiscovery({
+  bin: claudeBin,
+  ignoreCwd: join(DATA_DIR, 'sonda-uso'),
+  onList: (found) => store.adopt(found, { transcriptFor: (cwd, id) => transcriptOf(cwd, id) }),
+  onError: logError,
+});
 const permissions = createPermissions({ timeoutMs: PERMISSION_WAIT_MS, onChange: () => store.notify() });
 const expectedToken = Buffer.from(config.token);
 const remoteGate = createRemoteGate(config.remotes);
@@ -91,6 +129,7 @@ const remoteRoutes = createRemoteRoutes({
 });
 
 const isLoopback = (req) => isLocalHook(req.socket.remoteAddress ?? '', req.headers);
+const log = (line) => process.stdout.write(`[painel] ${new Date().toISOString()} ${line}\n`);
 
 /** GET aceita o token na URL (EventSource não manda cabeçalho); ações só pelo cabeçalho. */
 function hasToken(req, url, { headerOnly = false } = {}) {
@@ -99,6 +138,27 @@ function hasToken(req, url, { headerOnly = false } = {}) {
   const given = Buffer.from(header.startsWith('Bearer ') ? header.slice(7) : fromQuery);
   return given.length === expectedToken.length && timingSafeEqual(given, expectedToken);
 }
+
+const actions = createActionRoutes({
+  store,
+  chat,
+  panel,
+  control,
+  discovery,
+  features: {
+    get: () => features,
+    set(next) {
+      features = saveFeatures(next);
+      chat.setEnabled(features.chat);
+      store.notify();
+      return features;
+    },
+  },
+  isLoopback,
+  hasToken,
+  logError,
+  log,
+});
 
 async function readLocalEvent(req, res) {
   if (!isLoopback(req)) {
@@ -130,6 +190,7 @@ async function handleHook(req, res) {
   if (!event) return undefined;
   store.ingest(event);
   if (event.hook_event_name === 'UserPromptSubmit') usageProbe.nudge();
+  if (event.hook_event_name === 'SessionEnd') chat.drop(event.session_id);
   return sendJson(res, 200, { success: true });
 }
 
@@ -189,13 +250,16 @@ async function handleDetail(res, id) {
   } catch (error) {
     if (error.code !== 'ENOENT') logError('resumo', error);
   }
-  const [view] = toView({ [id]: session }, Date.now()).map(withParent);
+  const [view] = toView({ [id]: session }, Date.now()).map(decorate);
   return sendJson(res, 200, {
     success: true,
     data: {
       ...view,
       cwd: session.cwd,
       lastPrompt: session.lastPrompt,
+      lastPromptAt: session.lastPromptAt ?? null,
+      lastChat: session.lastChat ?? null,
+      chatHistory: session.machine ? [] : chat.historyOf(id),
       startedAt: session.startedAt,
       permissions: permissions.forSession(id),
       subagentsRecent: recentSubagents(session).map(subagentView),
@@ -229,6 +293,7 @@ async function route(req, res) {
   if (req.method === 'POST' && pathname === '/usage') return handleUsage(req, res);
   if (req.method === 'POST' && pathname === '/permission') return handlePermissionHook(req, res);
   if (await remoteRoutes.handle(req, res, pathname)) return undefined;
+  if (await actions.handle(req, res, url)) return undefined;
   const decisionRoute = pathname.match(/^\/api\/permissions\/([\w-]{1,80})$/);
   const seenRoute = pathname.match(/^\/api\/sessions\/([\w-]{1,80})\/seen$/);
   if (req.method === 'POST' && (decisionRoute || seenRoute)) {
@@ -261,6 +326,8 @@ const refreshApp = () => Promise.all([appLinks.refresh(), appUsage.refresh()]);
 refreshApp();
 setInterval(refreshApp, APP_REFRESH_MS).unref();
 usageProbe.start();
+// PAINEL_DESCOBRIR=0 desliga a descoberta (só os hooks contam), útil em testes.
+if (process.env.PAINEL_DESCOBRIR !== '0') discovery.start();
 if (!usageProbe.available) process.stderr.write('[painel] não achei o `claude`: o uso do plano vem só da status line e do app do Claude\n');
 
 const shutdown = () => {

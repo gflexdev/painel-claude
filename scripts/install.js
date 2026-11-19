@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { loadConfig, DATA_DIR, rememberClaudeBin } from '../src/config.js';
 import { findClaude } from '../src/usage-probe.js';
 import {
-  HOOK_SCRIPT, PERMISSION_SCRIPT, LABEL, PLIST_FILE, ROOT, SETTINGS_FILE,
+  HOOK_SCRIPT, PERMISSION_SCRIPT, CHAT_SCRIPT, LABEL, PLIST_FILE, ROOT, SETTINGS_FILE,
   plistXml, reachableAddresses, readSettings, startService, withPainelHooks, writeSettings,
 } from './mac.js';
 import { STATUSLINE_SCRIPT, saveOriginal, withPainelStatusLine } from './statusline.js';
@@ -31,6 +31,7 @@ out(claudeBin
   : '• não achei o comando claude: o uso do plano vem só da status line e do app do Claude. Instale o Claude Code no terminal e rode este instalador de novo.');
 chmodSync(HOOK_SCRIPT, 0o755);
 chmodSync(PERMISSION_SCRIPT, 0o755);
+chmodSync(CHAT_SCRIPT, 0o755);
 
 chmodSync(STATUSLINE_SCRIPT, 0o755);
 chmodSync(join(ROOT, 'hooks', 'enviar-uso.sh'), 0o755);
@@ -71,4 +72,5 @@ reachableAddresses().forEach(({ address, kind }) => {
   out(`  ${kind.padEnd(10)} http://${address}:${config.port}/?t=${config.token}`);
 });
 out();
-out('Sessões já abertas passam a aparecer no próximo evento; se alguma não aparecer, reabra-a.');
+out('Sessões já abertas aparecem em até 1 min (pelo `claude agents`) ou no próximo evento delas.');
+out('Mensagens, abrir e fechar sessões pelo painel ficam desligados: ligue em Ajustes (⚙), no painel aberto no Mac.');

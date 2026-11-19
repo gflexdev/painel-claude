@@ -1,6 +1,7 @@
 import { basename } from 'node:path';
 import { activityOf, clip, describeTool } from './tools.js';
-import { activeSubagents, parentPatchFromAgent, subagentPatch, subagentView } from './subagents.js';
+import { activeSubagents, awaitingPatch, parentPatchFromAgent, subagentPatch, subagentView } from './subagents.js';
+import { backgroundPatch, nextShells, shellsPatch } from './background.js';
 
 const MAX_SUBAGENTS_IN_VIEW = 4;
 
@@ -54,11 +55,16 @@ function notificationPatch(previous, event) {
   return {};
 }
 
+/** Pasta do repositório de uma sessão: a própria pasta, ou a de fora quando é um worktree do Claude. */
+export function projectRoot(cwd) {
+  if (typeof cwd !== 'string' || !cwd) return '';
+  return cwd.replace(/\/+$/, '').replace(/\/\.claude(?:\/|-)worktrees\/[^/]+$/, '');
+}
+
 /** Pasta de trabalho → projeto. Worktree do Claude (`repo/.claude/worktrees/x`) conta como o repositório. */
 export function projectOf(cwd) {
-  if (typeof cwd !== 'string' || !cwd) return '';
-  const repo = cwd.replace(/\/+$/, '').replace(/\/\.claude(?:\/|-)worktrees\/[^/]+$/, '');
-  return basename(repo);
+  const repo = projectRoot(cwd);
+  return repo ? basename(repo) : '';
 }
 
 const NAME_MAX = 60;
@@ -70,6 +76,8 @@ export function sessionName(session) {
   const line = String(session.firstPrompt ?? session.lastPrompt ?? '').split('\n').map((l) => l.trim()).find(Boolean) ?? '';
   const prompt = line.startsWith('<') ? '' : line.replace(/^\//, '');
   if (prompt) return prompt.length > NAME_MAX ? `${prompt.slice(0, NAME_MAX - 1)}…` : prompt;
+  // Nome que o Claude Code mostra em `claude agents` (sessões descobertas antes do primeiro hook).
+  if (session.agentName) return session.agentName;
   return projectOf(session.cwd) || session.project || session.id.slice(0, 8);
 }
 
@@ -130,7 +138,11 @@ export function applyEvent(sessions, event, now, machine = null) {
   if (typeof id !== 'string' || !id) return sessions;
   const previous = sessions[id];
   if (previous && machineOf(previous) !== machine) return sessions;
-  const patch = parentPatchFromAgent(previous, event) ?? transition(previous, event);
+  // Stop com trabalho em segundo plano: a lista do próprio Claude Code vale mais que a conta de subagentes;
+  // sem a lista (`background_tasks` ausente), valem os subagentes ainda ativos e os comandos lançados no turno.
+  const background = backgroundPatch(event);
+  const waiting = background === undefined ? awaitingPatch(previous, event, now) ?? shellsPatch(previous, event) : background;
+  const patch = parentPatchFromAgent(previous, event) ?? waiting ?? transition(previous, event);
   if (patch === null) return sessions;
 
   const base = previous ?? {
@@ -154,6 +166,12 @@ export function applyEvent(sessions, event, now, machine = null) {
     // O transcript de outra máquina fica lá; o resumo chega por /remote/transcript.
     transcriptPath: machine ? null : event.transcript_path ?? base.transcriptPath,
     ...(machine && { machine }),
+    // Chegou um hook: a sessão descoberta pelo `claude agents` passa a ser guiada só pelos eventos.
+    ...(previous?.adopted && { adopted: false }),
+    // "Esperando trabalho em segundo plano" vale só até o próximo evento.
+    awaiting: patch.awaiting === true,
+    ...(event.hook_event_name === 'UserPromptSubmit' && !event.agent_id && { lastPromptAt: now }),
+    bgShells: nextShells(previous, event),
     status,
     statusSince: status === base.status && previous ? base.statusSince : now,
     lastEventAt: now,
@@ -171,6 +189,13 @@ export function applyMeta(sessions, id, meta) {
     .filter((key) => meta[key] !== undefined && meta[key] !== null && meta[key] !== current[key])
     .map((key) => [key, meta[key]]));
   return Object.keys(changes).length ? { ...sessions, [id]: { ...current, ...changes } } : sessions;
+}
+
+/** Guarda a última mensagem mandada pelo painel, para o detalhe mostrar o pedido mais recente. */
+export function noteChat(sessions, id, text, now) {
+  const current = sessions[id];
+  if (!current) return sessions;
+  return { ...sessions, [id]: { ...current, lastChat: { text: clip(text, 280), at: now } } };
 }
 
 /** Você abriu a sessão no painel: deixa de pedir revisão. */
@@ -207,7 +232,8 @@ export function toView(sessions, now) {
       turns: s.turns ?? null,
       since: s.statusSince,
       lastEventAt: s.lastEventAt,
-      stale: s.status === STATUS.WORKING && now - s.lastEventAt > STALE_WORKING_MS,
+      // Quem espera um comando longo em segundo plano fica calado por muito tempo, e isso não é "sem sinal".
+      stale: s.status === STATUS.WORKING && !s.adopted && !s.awaiting && now - s.lastEventAt > STALE_WORKING_MS,
       subagentCount: activeSubagents(s).length,
       subagents: activeSubagents(s).slice(0, MAX_SUBAGENTS_IN_VIEW).map(subagentView),
     }))

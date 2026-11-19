@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, renameSync, appendFileSync } from 'node:fs';
-import { applyEvent, applyMeta, machineOf, markSeen, prune, toView } from './state.js';
+import { applyEvent, applyMeta, machineOf, markSeen, noteChat, prune, toView } from './state.js';
+import { adoptSessions } from './discover.js';
 import { readMeta } from './transcript.js';
 
 const SAVE_DELAY_MS = 1000;
@@ -133,6 +134,31 @@ export function createStore({ stateFile, eventsLog, debug, onError, decorate = (
       changed();
       return true;
     },
+    /** Sessões vivas vistas pelo `claude agents`: entram as novas e seguem as que ainda não mandaram hook. */
+    adopt(found, options) {
+      const before = sessions;
+      const next = adoptSessions(sessions, found, Date.now(), options);
+      if (next === before) return 0;
+      sessions = next;
+      changed();
+      const touched = Object.values(next).filter((s) => s !== before[s.id]);
+      touched.filter((s) => s.transcriptPath && s.status !== 'ended')
+        .forEach((s) => refreshMeta(s.id, s.transcriptPath, true));
+      return touched.length;
+    },
+    /** Mensagem mandada pelo painel: vira o "último pedido" do detalhe se for mais nova que o digitado no Mac. */
+    noteChat(id, text) {
+      const next = noteChat(sessions, id, text, Date.now());
+      if (next === sessions) return;
+      sessions = next;
+      changed();
+    },
+    /** A sessão saiu por ordem do painel (fechada ou apagada): encerra sem esperar o hook dela. */
+    end(id) {
+      if (!sessions[id] || sessions[id].status === 'ended') return;
+      sessions = applyEvent(sessions, { hook_event_name: 'SessionEnd', session_id: id }, Date.now(), machineOf(sessions[id]));
+      changed();
+    },
     tick() {
       const next = prune(sessions, Date.now());
       if (next !== sessions) {
@@ -142,6 +168,8 @@ export function createStore({ stateFile, eventsLog, debug, onError, decorate = (
       }
     },
     get: (id) => sessions[id],
+    /** Todas as sessões em memória, sem enfeite (para listar as pastas de projeto). */
+    all: () => Object.values(sessions),
     view,
     /** Reenvia o snapshot sem mudar o estado (ex.: um pedido de permissão chegou ou saiu). */
     notify,

@@ -8,6 +8,20 @@ export const CONFIG_FILE = join(DATA_DIR, 'config.json');
 export const STATE_FILE = join(DATA_DIR, 'state.json');
 export const EVENTS_LOG = join(DATA_DIR, 'eventos.log');
 export const USAGE_FILE = join(DATA_DIR, 'uso.json');
+export const PANEL_FILE = join(DATA_DIR, 'painel.json');
+
+/**
+ * Ajustes que deixam o painel agir nas sessões (grupo 2). Todos começam desligados e só mudam pelo próprio Mac.
+ * chat: mandar mensagens às sessões; launch: abrir sessões; closeRemove: fechar e apagar sessões abertas em
+ * segundo plano.
+ */
+export const FEATURE_KEYS = Object.freeze(['chat', 'launch', 'closeRemove']);
+
+/** Qualquer coisa → { chat, launch, closeRemove } só com true/false; o que não for `true` vale desligado. */
+export function normalizeFeatures(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  return Object.freeze(Object.fromEntries(FEATURE_KEYS.map((key) => [key, source[key] === true])));
+}
 
 const DEFAULTS = Object.freeze({ port: 7777, host: '0.0.0.0', debug: false });
 
@@ -28,6 +42,7 @@ export function loadConfig() {
     ...config,
     port: Number(process.env.PAINEL_PORT ?? config.port),
     debug: process.env.PAINEL_DEBUG === '1' || config.debug === true,
+    features: normalizeFeatures(config.features),
   };
 }
 
@@ -62,6 +77,14 @@ export function rememberClaudeBin(path) {
   const { claudeBin: _old, ...rest } = stored;
   writeStored(path ? { ...rest, claudeBin: path } : rest);
   return true;
+}
+
+/** Grava os Ajustes no config.json (sem mexer no resto) e devolve o que ficou valendo. */
+export function saveFeatures(features) {
+  const next = normalizeFeatures(features);
+  const stored = readStored();
+  writeStored({ ...stored, features: { ...next } });
+  return next;
 }
 
 /** Tira a máquina da lista: o token dela deixa de valer no próximo início do servidor. */

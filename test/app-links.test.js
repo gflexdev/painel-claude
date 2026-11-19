@@ -14,6 +14,7 @@ const child = {
 test('parseAppSession: pega ids, pai e profundidade; ignora arquivo estranho', () => {
   assert.deepEqual(parseAppSession(child), {
     localId: 'local_filha', cliIds: ['cli-filha', 'cli-filha-antiga'], cliSessionId: 'cli-filha', parentLocalId: 'local_pai', depth: 1,
+    scheduled: false,
   });
   assert.equal(parseAppSession(parent).parentLocalId, null);
   assert.equal(parseAppSession({ sessionId: 'x' }), null);
@@ -55,4 +56,24 @@ test('createAppLinks: pasta inexistente não é erro', async () => {
   await links.refresh();
   assert.equal(links.size(), 0);
   assert.equal(errors, 0);
+});
+
+test('tarefa agendada: scheduledTaskId marca a sessão (por todos os ids dela) e só lê o campo', async () => {
+  assert.equal(parseAppSession({ ...parent, scheduledTaskId: 'task_123' }).scheduled, true);
+  assert.equal(parseAppSession({ ...parent, scheduledTaskId: '' }).scheduled, false);
+  assert.equal(parseAppSession({ ...parent, scheduledTaskId: 42 }).scheduled, false);
+  const dir = mkdtempSync(join(tmpdir(), 'painel-app-agendada-'));
+  const folder = join(dir, 'conta', 'org');
+  mkdirSync(folder, { recursive: true });
+  writeFileSync(join(folder, 'local_agendada.json'), JSON.stringify({
+    sessionId: 'local_agendada', cliSessionId: 'cli-agendada', priorCliSessionIds: ['cli-agendada-antes'], scheduledTaskId: 'relatorio',
+  }));
+  writeFileSync(join(folder, 'local_pai.json'), JSON.stringify(parent));
+  let changes = 0;
+  const links = createAppLinks({ dir, onChange: () => { changes += 1; } });
+  await links.refresh();
+  assert.equal(links.isScheduled('cli-agendada'), true);
+  assert.equal(links.isScheduled('cli-agendada-antes'), true);
+  assert.equal(links.isScheduled('cli-pai'), false);
+  assert.equal(changes, 1, 'agendada nova conta como mudança');
 });

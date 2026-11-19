@@ -8,25 +8,34 @@ import { fileURLToPath } from 'node:url';
 export const ROOT = fileURLToPath(new URL('..', import.meta.url));
 export const HOOK_SCRIPT = join(ROOT, 'hooks', 'enviar-evento.sh');
 export const PERMISSION_SCRIPT = join(ROOT, 'hooks', 'permissao.sh');
+export const CHAT_SCRIPT = join(ROOT, 'hooks', 'esperar-mensagem.sh');
 export const SETTINGS_FILE = join(homedir(), '.claude', 'settings.json');
 export const LABEL = 'br.com.gflex.painel-claude';
 export const PLIST_FILE = join(homedir(), 'Library', 'LaunchAgents', `${LABEL}.plist`);
 
+/** O hook do chat fica pendurado esperando mensagem; o Claude Code o encerra depois deste tempo (12 h). */
+export const CHAT_TIMEOUT_S = 43_200;
+
 /**
  * Hooks do painel por evento. O de permissão segura até 10 min esperando o toque na tela
- * (o diálogo do Claude corre junto); os outros têm timeout curto.
+ * (o diálogo do Claude corre junto); os outros têm timeout curto. Com `chatCommand`, SessionStart e Stop
+ * ganham também o hook que espera mensagem do painel (asyncRewake: em segundo plano, acorda a sessão ao sair
+ * com 2). Ele fica sempre instalado, mas com o ajuste de mensagens desligado o painel o dispensa na hora.
  */
-export function hookPlan(eventCommand, permissionCommand) {
+export function hookPlan(eventCommand, permissionCommand, chatCommand = null) {
   const eventHook = Object.freeze({ type: 'command', command: eventCommand, timeout: 3 });
   const permissionHook = Object.freeze({ type: 'command', command: permissionCommand, timeout: 600 });
+  const chatHook = chatCommand
+    && Object.freeze({ type: 'command', command: chatCommand, asyncRewake: true, timeout: CHAT_TIMEOUT_S });
+  const withChat = chatHook ? Object.freeze([eventHook, chatHook]) : eventHook;
   return Object.freeze({
-    SessionStart: eventHook,
+    SessionStart: withChat,
     UserPromptSubmit: eventHook,
     PreToolUse: eventHook,
     PostToolUse: eventHook,
     PermissionRequest: permissionHook,
     Notification: eventHook,
-    Stop: eventHook,
+    Stop: withChat,
     StopFailure: eventHook,
     PreCompact: eventHook,
     SessionEnd: eventHook,
@@ -34,9 +43,9 @@ export function hookPlan(eventCommand, permissionCommand) {
     SubagentStop: eventHook,
   });
 }
-export const HOOK_PLAN = hookPlan(HOOK_SCRIPT, PERMISSION_SCRIPT);
+export const HOOK_PLAN = hookPlan(HOOK_SCRIPT, PERMISSION_SCRIPT, CHAT_SCRIPT);
 export const HOOK_EVENTS = Object.freeze(Object.keys(HOOK_PLAN));
-const OUR_COMMANDS = new Set([HOOK_SCRIPT, PERMISSION_SCRIPT]);
+const OUR_COMMANDS = new Set([HOOK_SCRIPT, PERMISSION_SCRIPT, CHAT_SCRIPT]);
 const isMacCommand = (command) => OUR_COMMANDS.has(command);
 
 export function readSettings() {
@@ -66,8 +75,10 @@ export function stripHooks(settings, isOursCommand) {
 export function mergeHooks(settings, plan, isOursCommand) {
   const cleaned = stripHooks(settings, isOursCommand).hooks;
   const hooks = { ...cleaned };
-  Object.entries(plan).forEach(([event, hook]) => {
-    hooks[event] = [...(cleaned[event] ?? []), { hooks: [{ ...hook }] }];
+  Object.entries(plan).forEach(([event, planned]) => {
+    // Um evento pode ter mais de um hook do painel; cada um vai no seu grupo.
+    const ours = (Array.isArray(planned) ? planned : [planned]).map((hook) => ({ hooks: [{ ...hook }] }));
+    hooks[event] = [...(cleaned[event] ?? []), ...ours];
   });
   return { ...settings, hooks };
 }

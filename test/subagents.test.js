@@ -72,9 +72,25 @@ test('toView leva os subagentes ativos (no máximo 4) e a contagem', () => {
   assert.deepEqual(Object.keys(view.subagents[0]).sort(), ['activity', 'description', 'detail', 'id', 'status', 'type']);
 });
 
-test('Stop da sessão fecha os subagentes que ficaram abertos', () => {
-  const sessions = run([...START, [{ hook_event_name: 'Stop' }, 50]]);
+test('Stop da sessão fecha os subagentes que ficaram abertos e sem sinal há mais de 15 min', () => {
+  const sessions = run([...START, [{ hook_event_name: 'Stop' }, 16 * 60_000]]);
   assert.equal(activeSubagents(sessions[S]).length, 0);
+  assert.equal(sessions[S].status, 'idle');
+});
+
+test('Stop com subagente ainda rodando: a sessão fica aguardando, não "terminou"', () => {
+  const sessions = run([...START, [{ hook_event_name: 'Stop' }, 50]]);
+  assert.equal(sessions[S].status, 'working');
+  assert.equal(sessions[S].detail, 'aguardando o subagente Explore');
+  assert.notEqual(sessions[S].unseen, true);
+  assert.equal(activeSubagents(sessions[S]).length, 1);
+  assert.equal(toView(sessions, T0 + 20 * 60_000)[0].stale, false, 'esperando em segundo plano não é "sem sinal"');
+});
+
+test('Stop com background_tasks vazio vale mais que a conta de subagentes: terminou', () => {
+  const sessions = run([...START, [{ hook_event_name: 'Stop', background_tasks: [] }, 50]]);
+  assert.equal(sessions[S].status, 'idle');
+  assert.equal(sessions[S].unseen, true);
 });
 
 test('quando um subagente termina, a sessão volta a delegar para o que sobrou, ou a pensar', () => {
