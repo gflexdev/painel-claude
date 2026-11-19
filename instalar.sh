@@ -102,4 +102,4 @@ if [[ -n "$LINK" ]] && command -v qrencode >/dev/null 2>&1; then
 fi
 say
 say "Guarde o link: quem tiver o token pode aprovar comandos no seu Mac. Não compartilhe."
-say "Sessões do Claude Code que já estavam abertas aparecem no próximo pedido; se alguma não aparecer, reabra-a."
+say "Sessões do Claude Code que já estavam abertas aparecem em até 1 min; mensagens, abrir e fechar sessões ficam desligados até você ligar em Ajustes, no painel do Mac."
