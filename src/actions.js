@@ -186,10 +186,16 @@ export function createActionRoutes(deps) {
       const sessionRoute = pathname.match(SESSION_ACTION);
       const isPost = req.method === 'POST' && (sessionRoute || pathname === '/api/sessions' || pathname === '/api/settings');
       const isProjects = req.method === 'GET' && pathname === '/api/projects';
-      if (!isPost && !isProjects) return false;
+      const isSettingsRead = req.method === 'GET' && pathname === '/api/settings';
+      if (!isPost && !isProjects && !isSettingsRead) return false;
       if (!hasToken(req, url, { headerOnly: true })) {
         req.resume();
         sendJson(res, 401, { success: false, error: 'token inválido' });
+        return true;
+      }
+      if (isSettingsRead) {
+        // canChange: este aparelho é o próprio Mac (loopback sem proxy); do celular os Ajustes são só leitura.
+        sendJson(res, 200, { success: true, data: { features: features.get(), canChange: isLoopback(req) } });
         return true;
       }
       if (isProjects) {

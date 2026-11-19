@@ -81,6 +81,10 @@ test('Ajustes: só muda do próprio Mac e com token; pelo proxy (celular) é rec
     assert.equal(local.status, 200);
     assert.deepEqual(local.body.data.features, { chat: true, launch: false, closeRemove: false });
     assert.equal((await app.post('/api/settings', { nada: 1 })).status, 400);
+    const read = async (headers) => (await fetch(`${app.base}/api/settings`, { headers: { Authorization: `Bearer ${TOKEN}`, ...headers } })).json();
+    assert.equal((await read({})).data.canChange, true);
+    assert.equal((await read({ 'X-Forwarded-For': '100.64.0.5' })).data.canChange, false);
+    assert.equal((await read({ 'X-Forwarded-For': '100.64.0.5' })).data.features.chat, true);
   } finally {
     await app.close();
   }

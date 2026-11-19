@@ -1,0 +1,160 @@
+/* ---------- barra do topo: modos de ver e botões ---------- */
+.view-switch {
+  display: flex;
+  margin-left: auto;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--tile);
+}
+.view-switch button {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-dim);
+  font: 600 12px var(--font-mono);
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+}
+.view-switch button:hover { color: var(--ink); }
+.view-switch button[aria-pressed='true'] { background: var(--line); color: var(--ink); }
+.view-switch button:focus-visible { outline: 2px solid var(--unseen); outline-offset: 1px; }
+/* Com o modo à direita, os contadores não empurram mais nada para a ponta. */
+.counters { margin-right: 0; }
+
+.top-btn {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--tile);
+  color: var(--ink-dim);
+  font: 12px/1 var(--font-mono);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.top-btn[hidden] { display: none; }
+.top-btn.square { width: 36px; padding: 0; font-size: 16px; }
+.top-btn.launch { border-color: #343a4a; background: var(--tile-hi); color: var(--ink); font: 700 18px/1 var(--font-display); }
+.top-btn:hover { border-color: var(--ink-faint); color: var(--ink); }
+.top-btn:focus-visible { outline: 2px solid var(--unseen); outline-offset: 2px; }
+#scheduled-button[aria-pressed='true'] { color: #d6d3cc; }
+#scheduled-button[aria-pressed='false'] { color: var(--ink-faint); text-decoration: line-through; }
+.scheduled-mark { color: var(--unseen); }
+
+/* ---------- quadros por projeto ---------- */
+.grid[hidden] { display: none; }
+.grid-ruler { height: 0; visibility: hidden; overflow: hidden; }
+.grid[data-grouped] { grid-auto-flow: row dense; align-items: start; }
+.group {
+  grid-column: span var(--span, 1);
+  min-width: 0;
+  padding: 0 0 4px;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius-tile) + 4px);
+  background: #12141a;
+}
+/* Algo lá dentro espera você: a borda fica avermelhada. */
+.group[data-waiting] { border-color: #4a2630; }
+.group[data-pinned]:not([data-waiting]) { border-color: color-mix(in srgb, var(--working) 35%, var(--line)); }
+.group[data-collapsed] { padding-bottom: 0; }
+.group-bar { display: flex; align-items: center; }
+.group-head {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 12px 14px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.group-head:focus-visible { outline: 2px solid var(--unseen); outline-offset: -2px; border-radius: inherit; }
+.group-chevron {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin: 0 2px 3px;
+  border-right: 2px solid var(--ink-dim);
+  border-bottom: 2px solid var(--ink-dim);
+  transform: rotate(45deg);
+  transition: transform 160ms var(--ease-out);
+}
+.group[data-collapsed] .group-chevron { transform: rotate(-45deg); margin-bottom: 0; }
+.group-name { margin: 0; min-width: 0; font: 700 16px/1.2 var(--font-display); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.group-head .machine {
+  padding: 0 5px; border: 1px solid currentColor; border-radius: 4px;
+  font-size: 10px; font-weight: 600; color: var(--ink-dim);
+}
+.group-head .machine[hidden], .group-scheduled[hidden], .group-bars[hidden] { display: none; }
+.group-total, .group-scheduled { font-size: 11px; color: var(--ink-faint); white-space: nowrap; }
+.group-bars { gap: 4px; }
+.group-bars .strip-bar { width: 12px; height: 6px; border-radius: 3px; }
+.group-counts { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-left: auto; font-size: 11px; font-weight: 600; }
+.group-count { color: var(--c, var(--ink-faint)); white-space: nowrap; }
+.group-count[data-status='waiting'] { --c: var(--waiting); }
+.group-count[data-status='error'] { --c: var(--error); }
+.group-count[data-status='unseen'] { --c: var(--unseen); }
+.group-count[data-status='working'] { --c: var(--working); }
+.group-count[data-status='idle'] { --c: var(--ink-faint); font-weight: 400; }
+.group-pin {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  margin-right: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--tile);
+  color: var(--ink-faint);
+  font-size: 13px;
+  cursor: pointer;
+}
+.group-pin:hover { border-color: var(--ink-faint); color: var(--ink-dim); }
+.group-pin[aria-pressed='true'] { color: var(--working); }
+.group-pin:focus-visible { outline: 2px solid var(--unseen); outline-offset: 1px; }
+.group .group-grid {
+  grid-template-columns: repeat(var(--span, 1), minmax(0, 1fr));
+  gap: 14px;
+  padding: 0 14px 10px;
+}
+.group-grid[hidden] { display: none; }
+
+/* celular: quadros empilhados na largura toda, duas colunas de quadrados dentro */
+@media (max-width: 720px) {
+  .view-switch { order: 4; margin-left: 0; }
+  .view-switch button { min-height: 30px; padding: 0 9px; font-size: 11px; }
+  .counters { order: 3; width: auto; flex: 1; }
+}
+@media (max-width: 520px) {
+  .group { grid-column: 1 / -1; }
+  .group .group-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 0 10px 8px; }
+  .group-head { padding: 10px 12px; gap: 6px 8px; }
+  .group-name { font-size: 15px; }
+  .group-total { display: none; }
+  .top-btn:not(.square) { padding: 0 8px; font-size: 11px; }
+}
+
+/* celular: 1ª linha marca + botões e relógio; 2ª os contadores; 3ª o modo de ver, ⏱ e arquivadas.
+   O grupo da direita vira "contents" para cada botão poder ir para a linha certa. */
+@media (max-width: 520px) {
+  .topbar { flex-wrap: wrap; gap: 10px 8px; padding: 12px 12px 10px; }
+  .brand { margin-right: auto; }
+  .brand h1 { font-size: 18px; }
+  .clock-wrap { display: contents; }
+  #launch-button, #settings-button, #style-button, #link, #clock { order: 1; }
+  .style-button { width: 36px; height: 36px; }
+  .clock { font-size: 18px; }
+  .counters { order: 2; width: 100%; flex: none; flex-wrap: nowrap; gap: 12px; overflow: hidden; }
+  .counter { white-space: nowrap; }
+  .counter[data-zero], .counter .long { display: none; }
+  .view-switch { order: 3; }
+  #scheduled-button, #archived-button { order: 4; }
+  #scheduled-button { margin-left: auto; }
+}
