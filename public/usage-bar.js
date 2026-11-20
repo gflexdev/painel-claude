@@ -30,16 +30,26 @@ function whenLabel(ms, now) {
   return sameDay ? HOUR_MINUTE.format(date) : `${WEEKDAY.format(date).replace('.', '')} ${HOUR_MINUTE.format(date)}`;
 }
 
+/**
+ * Quanto ainda dá para gastar: por dia (ou hora) enquanto falta mais de uma unidade; perto do reset a taxa
+ * explode ("~717%/dia" com 30 min restantes) e o que importa é o que sobra.
+ */
+function budgetOf(pace, spec, verb, { withCurrent = true } = {}) {
+  if (pace.remaining < spec.unitMs) return `sobram ${pct(100 - pace.used)} até zerar`;
+  const current = withCurrent ? ` (agora ${rate(pace.currentPerUnit, spec.unit)})` : '';
+  return `${verb} ~${rate(pace.neededPerUnit, spec.unit)}${current}`;
+}
+
 /** A frase principal: o que o ritmo atual significa para chegar ao reset com tudo usado. */
 export function adviceOf(pace, spec, now) {
   switch (pace.state) {
     case 'limit': return `limite atingido · volta ${whenLabel(pace.resetsAt, now)}`;
     case 'reset': return 'já zerou · esperando o próximo dado';
     case 'unknown': return 'sem o dia do reset ainda · abra uma sessão no terminal uma vez para o painel aprender';
-    case 'early': return `começo da janela · dá para usar ~${rate(pace.neededPerUnit, spec.unit)}`;
-    case 'over': return `nesse ritmo acaba ${whenLabel(pace.exhaustsAt, now)}, ${untilLabel(pace.exhaustsAt, pace.resetsAt)} antes de zerar · segure em ~${rate(pace.neededPerUnit, spec.unit)} (agora ${rate(pace.currentPerUnit, spec.unit)})`;
+    case 'early': return `começo da janela · ${budgetOf(pace, spec, 'dá para usar', { withCurrent: false })}`;
+    case 'over': return `nesse ritmo acaba ${whenLabel(pace.exhaustsAt, now)}, ${untilLabel(pace.exhaustsAt, pace.resetsAt)} antes de zerar · ${budgetOf(pace, spec, 'segure em')}`;
     case 'on': return `no ritmo para fechar perto de 100% (~${pct(pace.projected)})`;
-    default: return `nesse ritmo fecha em ~${pct(pace.projected)} · dá para usar ~${rate(pace.neededPerUnit, spec.unit)} (agora ${rate(pace.currentPerUnit, spec.unit)})`;
+    default: return `nesse ritmo fecha em ~${pct(pace.projected)} · ${budgetOf(pace, spec, 'dá para usar')}`;
   }
 }
 
@@ -78,11 +88,20 @@ export function renderUsage(container, usage, now) {
   const stale = usage?.updatedAt && now - usage.updatedAt > origin.staleAfter
     ? [el('p', 'usage-stale', `uso atualizado há ${elapsed(usage.updatedAt, now)} (${origin.label})`)]
     : [];
-  const scoped = (usage?.scoped ?? []).filter((s) => Number.isFinite(s.usedPercentage));
-  const perModel = scoped.length
-    ? [el('p', 'usage-scoped', `limite por modelo: ${scoped.map((s) => `${s.label} ${pct(s.usedPercentage)}`).join(' · ')}`)]
-    : [];
+  const perModel = scopedLine(usage, now);
   container.replaceChildren(list, ...perModel, ...stale, moreButton(container));
+}
+
+/**
+ * "limite por modelo: Fable 41%". Esse número só vem do /usage; se a última consulta for velha (a semana pode
+ * ter vindo depois, do app), diz de quando é, para não parecer que os dois são de agora. Reset passado some.
+ */
+function scopedLine(usage, now) {
+  const scoped = (usage?.scoped ?? [])
+    .filter((s) => Number.isFinite(s.usedPercentage) && !(s.resetsAt <= now));
+  if (!scoped.length) return [];
+  const old = usage.scopedAt && now - usage.scopedAt > ORIGIN.cli.staleAfter ? ` (de ${whenLabel(usage.scopedAt, now)})` : '';
+  return [el('p', 'usage-scoped', `limite por modelo: ${scoped.map((s) => `${s.label} ${pct(s.usedPercentage)}`).join(' · ')}${old}`)];
 }
 
 /**

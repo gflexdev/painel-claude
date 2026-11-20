@@ -69,3 +69,39 @@ test('createUsageProbe: com sessão rodando consulta mais vezes; sem claude não
   const missing = createUsageProbe({ claudeBin: '/nao/existe', workDir, run: async () => { throw new Error('não devia rodar'); }, onReport: () => {} });
   if (!missing.available) assert.equal(await missing.probe(), false);
 });
+
+test('createUsageProbe: depois de falhar, uma sessão começando ainda consulta (no máximo a cada 5 min)', async () => {
+  const workDir = join(mkdtempSync(join(tmpdir(), 'painel-sonda-')), 'sonda');
+  let clock = 1_000_000;
+  let runs = 0;
+  let fail = true;
+  const probe = createUsageProbe({
+    claudeBin: process.execPath, workDir, now: () => clock,
+    run: async () => { runs += 1; return fail ? 'sem relatório' : stream([WEEKLY]); },
+    onReport: () => {},
+  });
+  assert.equal(await probe.probe(), false);
+  clock += ACTIVE_EVERY_MS - 1;
+  probe.nudge();
+  assert.equal(runs, 1, 'cedo demais');
+  fail = false;
+  clock += 1;
+  probe.nudge();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(runs, 2);
+});
+
+test('createUsageProbe: o erro diz o que o /usage respondeu', async () => {
+  const workDir = join(mkdtempSync(join(tmpdir(), 'painel-sonda-')), 'sonda');
+  const errors = [];
+  const output = [
+    JSON.stringify({ type: 'system', subtype: 'init' }),
+    JSON.stringify({ type: 'result', subtype: 'success', result: 'Failed to load usage data\nmais coisa' }),
+  ].join('\n');
+  const probe = createUsageProbe({
+    claudeBin: process.execPath, workDir, run: async () => output,
+    onReport: () => {}, onError: (_where, error) => errors.push(error.message),
+  });
+  await probe.probe();
+  assert.match(errors[0], /Failed to load usage data/);
+});

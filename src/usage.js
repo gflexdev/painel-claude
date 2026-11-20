@@ -106,6 +106,8 @@ export function createUsage({ file, onChange, onError, now = Date.now }) {
         ...(fiveHour && { fiveHour }),
         ...(report.sevenDay && { sevenDay: report.sevenDay }),
         scoped: report.scoped ?? [],
+        // O limite por modelo só vem desta consulta: a amostra do app renova a semana, não ele.
+        scopedAt: t,
         updatedAt: t,
         source: 'cli',
       };

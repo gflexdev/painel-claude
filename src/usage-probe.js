@@ -70,11 +70,28 @@ export function parseUsageReport(output) {
   return { ...windows, scoped };
 }
 
+/** O texto que o /usage respondeu (a primeira linha), para o log dizer por que não veio número. */
+export function usageReply(output) {
+  const text = String(output ?? '').split('\n').reduce((found, line) => {
+    if (found || !line.includes('"result"')) return found;
+    try {
+      const result = JSON.parse(line)?.result;
+      return typeof result === 'string' ? result : null;
+    } catch {
+      return null;
+    }
+  }, null);
+  return text?.split('\n').find((line) => line.trim())?.trim().slice(0, 200) ?? null;
+}
+
 function runClaude(bin, cwd) {
   return new Promise((resolve, reject) => {
-    const child = execFile(bin, PROBE_ARGS, { cwd, timeout: PROBE_TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024 }, (error, stdout) => {
-      if (error) reject(error);
-      else resolve(stdout);
+    const child = execFile(bin, PROBE_ARGS, { cwd, timeout: PROBE_TIMEOUT_MS, maxBuffer: 4 * 1024 * 1024 }, (error, stdout, stderr) => {
+      if (!error) return resolve(stdout);
+      // O "Command failed" do execFile não diz nada: junta se foi o tempo, o código de saída e o que o claude disse.
+      const why = error.killed ? `passou de ${PROBE_TIMEOUT_MS / 1000} s` : `saiu com ${error.code ?? error.signal}`;
+      const said = usageReply(stdout) ?? String(stderr ?? '').trim().split('\n').pop()?.slice(0, 200);
+      reject(new Error(`\`claude -p /usage\` ${why}${said ? `: ${said}` : ''}`));
     });
     // Sem entrada: com o stdin aberto, o `claude -p` espera 3 s por dados e às vezes falha.
     child.stdin?.end();
@@ -101,8 +118,12 @@ export function createUsageProbe({
     lastRunAt = now();
     try {
       mkdirSync(workDir, { recursive: true, mode: 0o700 });
-      const report = parseUsageReport(await run(bin, workDir));
-      if (!report) throw new Error('resposta do /usage sem rate_limits (plano sem limites ou login de API)');
+      const output = await run(bin, workDir);
+      const report = parseUsageReport(output);
+      if (!report) {
+        const said = usageReply(output);
+        throw new Error(`resposta do /usage sem rate_limits${said ? `: ${said}` : ' (plano sem limites ou login de API)'}`);
+      }
       failures = 0;
       onReport(report);
       return true;
@@ -137,9 +158,13 @@ export function createUsageProbe({
     start(firstDelay = 5_000) {
       if (bin) schedule(firstDelay);
     },
-    /** Uma sessão começou a rodar e a última consulta está velha: consulta logo. */
+    /**
+     * Uma sessão começou a rodar e a última consulta está velha: consulta logo. Vale também depois de falhas
+     * (a noite com o Mac dormindo deixa a espera em 1 h, e o número ficava velho a manhã toda); o intervalo
+     * mínimo de 5 min continua.
+     */
     nudge() {
-      if (bin && !running && now() - lastRunAt >= ACTIVE_EVERY_MS && !failures) probe();
+      if (bin && !running && now() - lastRunAt >= ACTIVE_EVERY_MS) probe();
     },
   };
 }

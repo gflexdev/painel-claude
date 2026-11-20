@@ -135,3 +135,29 @@ test('updateFromProbe: vira a fonte, guarda os limites por modelo e não deixa j
   assert.equal(view.scoped[0].label, 'Fable');
   assert.equal(usage.updateFromProbe(null), false);
 });
+
+test('adviceOf: com menos de um dia para zerar fala o que sobra, não uma taxa por dia', async () => {
+  const { adviceOf } = await import('../public/usage-bar.js');
+  const now = 70 * DAY;
+  // 30 min para zerar, 85% usado: "~717%/dia" não diz nada; o que importa é que sobram 15%.
+  const pace = paceOf({ usedPercentage: 85, resetsAt: now + 30 * 60_000 }, WINDOWS.sevenDay, now);
+  const advice = adviceOf(pace, WINDOWS.sevenDay, now);
+  assert.doesNotMatch(advice, /%\/dia/);
+  assert.match(advice, /sobram 15% até zerar/);
+  // Com dias pela frente continua a taxa por dia.
+  const far = paceOf({ usedPercentage: 20, resetsAt: now + 3.5 * DAY }, WINDOWS.sevenDay, now);
+  assert.match(adviceOf(far, WINDOWS.sevenDay, now), /~23%\/dia/);
+});
+
+test('updateFromProbe guarda quando veio o limite por modelo; a amostra do app não o renova', () => {
+  const file = join(mkdtempSync(join(tmpdir(), 'painel-uso-')), 'uso.json');
+  let clock = 1_795_000_000_000;
+  const usage = createUsage({ file, onChange: () => {}, now: () => clock });
+  usage.updateFromProbe({ sevenDay: { usedPercentage: 80, resetsAt: clock + DAY }, scoped: [{ label: 'Fable', usedPercentage: 30, resetsAt: clock + DAY }] });
+  const probedAt = clock;
+  assert.equal(usage.view().scopedAt, probedAt);
+  clock += 2 * HOUR;
+  usage.updateFromApp({ t: clock, sd: 85 });
+  assert.equal(usage.view().sevenDay.usedPercentage, 85);
+  assert.equal(usage.view().scopedAt, probedAt, 'o Fable continua com a hora da consulta');
+});
