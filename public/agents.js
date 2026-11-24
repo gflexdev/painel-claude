@@ -1,6 +1,7 @@
 // Estilos de personagem das sessões. Em todos: o corpo é da sessão (sempre igual), um detalhe tem a cor do
 // projeto (a mesma do chapéu do robô) e a situação aparece em `currentColor` (a cor da situação no tile).
 import { ACCESSORIES, botSvg, drawPattern, hatFor, rect, seedFrom } from './bot.js';
+import { clawdSvg } from './clawd.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const SPRITE_SIZE = 12;
@@ -12,7 +13,8 @@ const BODY_COLORS = Object.freeze(['#c58bff', '#5fe0d0', '#ff8f6b', '#9be15d', '
 const SIGIL_SHAPES = Object.freeze(['circle', 'square', 'diamond', 'arch']);
 
 export const AGENT_STYLES = Object.freeze([
-  { id: 'robo', name: 'Robô', hint: 'o de sempre: corpo na cor da situação, chapéu do projeto' },
+  { id: 'clawd', name: 'Clawd', hint: 'o laranjinha do Claude Code: anda, acena, comemora e dorme' },
+  { id: 'robo', name: 'Robô', hint: 'corpo na cor da situação, chapéu do projeto' },
   { id: 'bicho', name: 'Bichinho', hint: 'orelhas do projeto; dorme quando parada' },
   { id: 'fantasma', name: 'Fantasminha', hint: 'cachecol do projeto; some devagar quando parada' },
   { id: 'astro', name: 'Astronauta', hint: 'visor inteiro na cor da situação' },
@@ -68,7 +70,8 @@ export const SPRITES = Object.freeze({
 /** Olhos fechados do bichinho (linha dos olhos), mostrados no lugar das pupilas quando a sessão está parada. */
 const SHUT_EYES = Object.freeze({ bicho: { row: 5, cols: [3, 4, 7, 8] } });
 
-export const normalizeStyle = (value) => (AGENT_STYLES.some((s) => s.id === value) ? value : 'robo');
+export const DEFAULT_STYLE = 'clawd';
+export const normalizeStyle = (value) => (AGENT_STYLES.some((s) => s.id === value) ? value : DEFAULT_STYLE);
 export const bodyColorFor = (id) => BODY_COLORS[(seedFrom(id || '?') >>> 4) % BODY_COLORS.length];
 export const accentFor = (project) => hatFor(project).color;
 export const sigilShapeFor = (id) => SIGIL_SHAPES[(seedFrom(id || '?') >>> 9) % SIGIL_SHAPES.length];
@@ -185,6 +188,7 @@ function sigilSvg({ id, name, project, accessory }) {
  */
 export function agentSvg(style, { id, name = '', project = '', accessory = null }) {
   const chosen = normalizeStyle(style);
+  if (chosen === 'clawd') return clawdSvg({ accessory });
   if (chosen === 'robo') return botSvg(id, { project, accessory });
   if (chosen === 'selo') return sigilSvg({ id, name, project, accessory });
   return spriteSvg(chosen, { id, project, accessory });
