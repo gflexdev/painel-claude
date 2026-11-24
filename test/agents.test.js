@@ -2,15 +2,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { AGENT_STYLES, SPRITES, accentFor, bodyColorFor, initialsOf, normalizeStyle, shade, sigilShapeFor } from '../public/agents.js';
 
-test('os 5 estilos estão na lista, com o robô primeiro (padrão)', () => {
-  assert.deepEqual(AGENT_STYLES.map((s) => s.id), ['robo', 'bicho', 'fantasma', 'astro', 'selo']);
+test('os 6 estilos estão na lista, com o Clawd primeiro (padrão)', () => {
+  assert.deepEqual(AGENT_STYLES.map((s) => s.id), ['clawd', 'robo', 'bicho', 'fantasma', 'astro', 'selo']);
   AGENT_STYLES.forEach((style) => assert.ok(style.name && style.hint));
 });
 
-test('normalizeStyle: valor desconhecido ou vazio volta para o robô', () => {
+test('normalizeStyle: valor desconhecido ou vazio volta para o Clawd', () => {
   assert.equal(normalizeStyle('astro'), 'astro');
-  assert.equal(normalizeStyle('lixo'), 'robo');
-  assert.equal(normalizeStyle(null), 'robo');
+  assert.equal(normalizeStyle('robo'), 'robo');
+  assert.equal(normalizeStyle('lixo'), 'clawd');
+  assert.equal(normalizeStyle(null), 'clawd');
 });
 
 test('sprites são 12×12 e só usam as letras conhecidas', () => {

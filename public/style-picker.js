@@ -1,4 +1,4 @@
-// Escolha do estilo do personagem: botão na barra de cima + janela com as 5 opções. Vale por aparelho.
+// Escolha do estilo do personagem: botão na barra de cima + janela com as opções. Vale por aparelho.
 import { AGENT_STYLES, agentSvg, normalizeStyle } from './agents.js';
 import { el } from './format.js';
 
@@ -12,7 +12,7 @@ function readStyle() {
   try {
     return normalizeStyle(localStorage.getItem(STORAGE_KEY));
   } catch {
-    return 'robo';
+    return normalizeStyle(null);
   }
 }
 

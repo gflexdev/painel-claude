@@ -1,5 +1,6 @@
 // Painel: conexão com o Mac, barra do topo, contadores, relógio e os três modos de ver (Quadros, Grade, Mapa).
 import { agentSvg } from './agents.js';
+import { wireClawd } from './clawd.js';
 import { createApi, readToken, saveToken } from './api.js';
 import { createDetail } from './detail.js';
 import { renderUsage } from './usage-bar.js';
@@ -53,6 +54,7 @@ function reloadIfOutdated(serverVersion) {
   return true;
 }
 
+wireClawd();
 const api = createApi(() => token);
 const picker = createStylePicker({
   button: $('style-button'),
