@@ -99,7 +99,6 @@ function renderMap() {
   orbit ??= createOrbit({
     stage: ui.orbit,
     avatar: Object.assign((seed) => agentSvg(picker.current(), seed), { key: () => picker.current() }),
-    core: (seed) => agentSvg('robo', seed),
     onOpenSession: (session) => openSession(session.id),
     pinned: () => gridView.pinned(),
   });

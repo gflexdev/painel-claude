@@ -108,7 +108,7 @@ export function clawdSvg({ accessory = null } = {}) {
 }
 
 /** Onde um toque faz o Clawd reagir: no quadro inteiro, não só no desenho. */
-const POKE_HOSTS = '.tile, .detail-bot, .style-button, .picker-option';
+const POKE_HOSTS = '.tile, .orb, .orbit-core, .detail-bot, .style-button, .picker-option';
 
 /**
  * Liga as reações (uma vez por página): olhos que seguem o mouse e pulo/pirueta a cada toque.

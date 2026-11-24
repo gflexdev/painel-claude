@@ -1,10 +1,12 @@
 /* ---------- estilo Clawd (public/clawd.js) ----------
-   A situação vem do ancestral com data-status (tile, painel lateral, amostra da janela de estilos).
+   A situação vem do ancestral com data-status (tile, painel lateral, amostra da janela de estilos) ou, no Mapa,
+   do data-tone do círculo e do núcleo (lá "terminou e não viu" é o tom 'unseen').
    Os contextos vão dentro de :where() para todas as regras de situação pesarem igual: quem vem depois ganha
    (padrão → situação → terminou não visto → passar o mouse → toque). */
 
 .agent-clawd { overflow: visible; shape-rendering: crispEdges; }
-.tile[data-status] .bot svg.agent-clawd { animation: none; } /* tira o bob/nudge genérico de style.css */
+.tile[data-status] .bot svg.agent-clawd,
+.orb[data-tone] .orb-face svg.agent-clawd { animation: none; } /* tira o bob/nudge genérico de style.css e orbit.css */
 
 .agent-clawd .cl-ground { opacity: 0.32; transform-box: fill-box; transform-origin: 50% 50%; }
 .agent-clawd .cl-sparkle { fill: var(--unseen); }
@@ -28,60 +30,61 @@
 .agent-clawd .cl-all { transform-box: fill-box; transform-origin: 50% 100%; }
 
 /* rodando: anda no lugar e digita com os bracinhos */
-:where([data-status='working']) .agent-clawd .cl-legs-a { animation: cl-step 0.44s steps(1) infinite; }
-:where([data-status='working']) .agent-clawd .cl-legs-b { animation: cl-step 0.44s steps(1) -0.22s infinite; }
-:where([data-status='working']) .agent-clawd .cl-arm-l { animation: cl-type 0.26s steps(1) infinite; }
-:where([data-status='working']) .agent-clawd .cl-arm-r { animation: cl-type 0.26s steps(1) -0.13s infinite; }
-:where([data-status='working']) .agent-clawd .cl-ground { animation: cl-glow 0.88s steps(1) infinite; }
+:where([data-status='working'], .orb[data-tone='working'], .orbit-core[data-tone='working']) .agent-clawd .cl-legs-a { animation: cl-step 0.44s steps(1) infinite; }
+:where([data-status='working'], .orb[data-tone='working'], .orbit-core[data-tone='working']) .agent-clawd .cl-legs-b { animation: cl-step 0.44s steps(1) -0.22s infinite; }
+:where([data-status='working'], .orb[data-tone='working'], .orbit-core[data-tone='working']) .agent-clawd .cl-arm-l { animation: cl-type 0.26s steps(1) infinite; }
+:where([data-status='working'], .orb[data-tone='working'], .orbit-core[data-tone='working']) .agent-clawd .cl-arm-r { animation: cl-type 0.26s steps(1) -0.13s infinite; }
+:where([data-status='working'], .orb[data-tone='working'], .orbit-core[data-tone='working']) .agent-clawd .cl-ground { animation: cl-glow 0.88s steps(1) infinite; }
 
 /* esperando você: pula, acena e fica de boca aberta */
-:where([data-status='waiting']) .agent-clawd .cl-all { animation: cl-hop 1.5s steps(1) infinite; }
-:where([data-status='waiting']) .agent-clawd .cl-ground { animation: cl-shadow 1.5s steps(1) infinite; }
-:where([data-status='waiting']) .agent-clawd .cl-arm-r { animation: cl-wave 0.36s steps(1) infinite; }
-:where([data-status='waiting']) .agent-clawd .cl-mouth { display: inline; }
+:where([data-status='waiting'], .orb[data-tone='waiting'], .orbit-core[data-tone='waiting']) .agent-clawd .cl-all { animation: cl-hop 1.5s steps(1) infinite; }
+:where([data-status='waiting'], .orb[data-tone='waiting'], .orbit-core[data-tone='waiting']) .agent-clawd .cl-ground { animation: cl-shadow 1.5s steps(1) infinite; }
+:where([data-status='waiting'], .orb[data-tone='waiting'], .orbit-core[data-tone='waiting']) .agent-clawd .cl-arm-r { animation: cl-wave 0.36s steps(1) infinite; }
+:where([data-status='waiting'], .orb[data-tone='waiting'], .orbit-core[data-tone='waiting']) .agent-clawd .cl-mouth { display: inline; }
 
 /* erro: olhos de X e um tremelique de vez em quando */
-:where([data-status='error']) .agent-clawd .cl-eyes-open { display: none; }
-:where([data-status='error']) .agent-clawd .cl-eyes-x { display: inline; }
-:where([data-status='error']) .agent-clawd .cl-all { animation: cl-shake 2.4s steps(1) infinite; }
-:where([data-status='error']) .agent-clawd .cl-arm-l,
-:where([data-status='error']) .agent-clawd .cl-arm-r { transform: translateY(1px); }
+:where([data-status='error'], .orb[data-tone='error'], .orbit-core[data-tone='error']) .agent-clawd .cl-eyes-open { display: none; }
+:where([data-status='error'], .orb[data-tone='error'], .orbit-core[data-tone='error']) .agent-clawd .cl-eyes-x { display: inline; }
+:where([data-status='error'], .orb[data-tone='error'], .orbit-core[data-tone='error']) .agent-clawd .cl-all { animation: cl-shake 2.4s steps(1) infinite; }
+:where([data-status='error'], .orb[data-tone='error'], .orbit-core[data-tone='error']) .agent-clawd .cl-arm-l,
+:where([data-status='error'], .orb[data-tone='error'], .orbit-core[data-tone='error']) .agent-clawd .cl-arm-r { transform: translateY(1px); }
 
 /* parada (já vista): dorme, respira devagar e solta zzz */
-:where([data-status='idle']) .agent-clawd .cl-eyes-open { display: none; }
-:where([data-status='idle']) .agent-clawd .cl-eyes-shut { display: inline; }
-:where([data-status='idle']) .agent-clawd .cl-face { transform: none; }
-:where([data-status='idle']) .agent-clawd .cl-top { animation: cl-breathe 3.2s steps(1) infinite; }
-:where([data-status='idle']) .agent-clawd .cl-z-1,
-:where([data-status='idle']) .agent-clawd .cl-z-2 { display: inline; animation: cl-float 3.2s steps(4) infinite; }
-:where([data-status='idle']) .agent-clawd .cl-z-2 { animation-delay: -1.6s; }
+:where([data-status='idle'], .orb[data-tone='idle'], .orbit-core[data-tone='idle']) .agent-clawd .cl-eyes-open { display: none; }
+:where([data-status='idle'], .orb[data-tone='idle'], .orbit-core[data-tone='idle']) .agent-clawd .cl-eyes-shut { display: inline; }
+:where([data-status='idle'], .orb[data-tone='idle'], .orbit-core[data-tone='idle']) .agent-clawd .cl-face { transform: none; }
+:where([data-status='idle'], .orb[data-tone='idle'], .orbit-core[data-tone='idle']) .agent-clawd .cl-top { animation: cl-breathe 3.2s steps(1) infinite; }
+:where([data-status='idle'], .orb[data-tone='idle'], .orbit-core[data-tone='idle']) .agent-clawd .cl-z-1,
+:where([data-status='idle'], .orb[data-tone='idle'], .orbit-core[data-tone='idle']) .agent-clawd .cl-z-2 { display: inline; animation: cl-float 3.2s steps(4) infinite; }
+:where([data-status='idle'], .orb[data-tone='idle'], .orbit-core[data-tone='idle']) .agent-clawd .cl-z-2 { animation-delay: -1.6s; }
 
 /* terminou e você não viu: comemora (olhinhos felizes, braços pra cima, pulinho duplo, brilho) */
-:where([data-unseen]) .agent-clawd .cl-eyes-shut { display: none; }
-:where([data-unseen]) .agent-clawd .cl-eyes-happy { display: inline; }
-:where([data-unseen]) .agent-clawd .cl-face { transform: none; }
-:where([data-unseen]) .agent-clawd .cl-top { animation: none; }
-:where([data-unseen]) .agent-clawd .cl-z-1,
-:where([data-unseen]) .agent-clawd .cl-z-2 { display: none; }
-:where([data-unseen]) .agent-clawd .cl-all { animation: cl-cheer 2.4s steps(1) infinite; }
-:where([data-unseen]) .agent-clawd .cl-arm-l,
-:where([data-unseen]) .agent-clawd .cl-arm-r { transform: translateY(-2px); }
-:where([data-unseen]) .agent-clawd .cl-sparkle { display: inline; animation: cl-twinkle 1.2s steps(1) infinite; }
+:where([data-unseen], .orb[data-tone='unseen'], .orbit-core[data-tone='unseen']) .agent-clawd .cl-eyes-open,
+:where([data-unseen], .orb[data-tone='unseen'], .orbit-core[data-tone='unseen']) .agent-clawd .cl-eyes-shut { display: none; }
+:where([data-unseen], .orb[data-tone='unseen'], .orbit-core[data-tone='unseen']) .agent-clawd .cl-eyes-happy { display: inline; }
+:where([data-unseen], .orb[data-tone='unseen'], .orbit-core[data-tone='unseen']) .agent-clawd .cl-face { transform: none; }
+:where([data-unseen], .orb[data-tone='unseen'], .orbit-core[data-tone='unseen']) .agent-clawd .cl-top { animation: none; }
+:where([data-unseen], .orb[data-tone='unseen'], .orbit-core[data-tone='unseen']) .agent-clawd .cl-z-1,
+:where([data-unseen], .orb[data-tone='unseen'], .orbit-core[data-tone='unseen']) .agent-clawd .cl-z-2 { display: none; }
+:where([data-unseen], .orb[data-tone='unseen'], .orbit-core[data-tone='unseen']) .agent-clawd .cl-all { animation: cl-cheer 2.4s steps(1) infinite; }
+:where([data-unseen], .orb[data-tone='unseen'], .orbit-core[data-tone='unseen']) .agent-clawd .cl-arm-l,
+:where([data-unseen], .orb[data-tone='unseen'], .orbit-core[data-tone='unseen']) .agent-clawd .cl-arm-r { transform: translateY(-2px); }
+:where([data-unseen], .orb[data-tone='unseen'], .orbit-core[data-tone='unseen']) .agent-clawd .cl-sparkle { display: inline; animation: cl-twinkle 1.2s steps(1) infinite; }
 
 /* encerrada: cinza, apagado e de olhos fechados */
-:where([data-status='ended']) .agent-clawd { filter: grayscale(1); opacity: 0.5; }
-:where([data-status='ended']) .agent-clawd .cl-eyes-open { display: none; }
-:where([data-status='ended']) .agent-clawd .cl-eyes-shut { display: inline; }
-:where([data-status='ended']) .agent-clawd .cl-face { transform: none; }
+:where([data-status='ended'], .orb[data-tone='ended'], .orbit-core[data-tone='ended']) .agent-clawd { filter: grayscale(1); opacity: 0.5; }
+:where([data-status='ended'], .orb[data-tone='ended'], .orbit-core[data-tone='ended']) .agent-clawd .cl-eyes-open { display: none; }
+:where([data-status='ended'], .orb[data-tone='ended'], .orbit-core[data-tone='ended']) .agent-clawd .cl-eyes-shut { display: inline; }
+:where([data-status='ended'], .orb[data-tone='ended'], .orbit-core[data-tone='ended']) .agent-clawd .cl-face { transform: none; }
 
 /* passar o mouse: acena; quem dormia abre o olho para espiar */
 @media (hover: hover) {
-  :where(.tile:hover, .style-button:hover, .picker-option:hover) .agent-clawd .cl-arm-r {
+  :where(.tile:hover, .orb:hover, .orbit-core:hover, .style-button:hover, .picker-option:hover) .agent-clawd .cl-arm-r {
     animation: cl-wave 0.36s steps(1) infinite;
   }
-  :where(.tile:hover[data-status='idle']:not([data-unseen])) .agent-clawd .cl-eyes-shut { display: none; }
-  :where(.tile:hover[data-status='idle']:not([data-unseen])) .agent-clawd .cl-eyes-open { display: inline; }
-  :where(.tile:hover[data-status='idle']:not([data-unseen])) .agent-clawd .cl-face {
+  :where(.tile:hover[data-status='idle']:not([data-unseen]), .orb:hover[data-tone='idle']) .agent-clawd .cl-eyes-shut { display: none; }
+  :where(.tile:hover[data-status='idle']:not([data-unseen]), .orb:hover[data-tone='idle']) .agent-clawd .cl-eyes-open { display: inline; }
+  :where(.tile:hover[data-status='idle']:not([data-unseen]), .orb:hover[data-tone='idle']) .agent-clawd .cl-face {
     transform: translate(calc(var(--lx, 0) * 1px), calc(var(--ly, 0) * 1px));
   }
 }

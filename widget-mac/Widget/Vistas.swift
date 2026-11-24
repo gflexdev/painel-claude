@@ -217,7 +217,7 @@ private struct LinhaSessao: View {
         let cor = Tema.cor(de: sessao)
         HStack(spacing: 8) {
             RoundedRectangle(cornerRadius: 1.5).fill(cor).frame(width: 3)
-            RoboView(sessao: sessao).frame(width: compacto ? 22 : 26, height: compacto ? 15 : 18)
+            ClawdView(sessao: sessao).frame(width: 30, height: 17)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(sessao.name)
@@ -263,7 +263,7 @@ private struct CartaoPedido: View {
         let cor = Tema.cor(de: pedido.tipo)
         VStack(alignment: .leading, spacing: compacto ? 4 : 6) {
             HStack(spacing: 6) {
-                RoboView(sessao: sessao).frame(width: compacto ? 20 : 24, height: compacto ? 14 : 17)
+                ClawdView(sessao: sessao).frame(width: 30, height: 17)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(sessao.name).font(Fonte.nome(compacto ? 11 : 12)).foregroundStyle(Tema.tinta).lineLimit(1)
                     Text(subtitulo).font(Fonte.mono(9, .semibold)).foregroundStyle(cor).lineLimit(1)

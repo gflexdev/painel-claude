@@ -51,12 +51,15 @@ function branchPath(item) {
   return `M${fix(x1)} ${fix(y1)} C${fix(c1x)} ${fix(c1y)} ${fix(c2x)} ${fix(c2y)} ${fix(item.x * wide)} ${fix(item.y)}`;
 }
 
+/** O personagem do núcleo: sempre o mesmo, o do próprio painel. */
+const CORE_SEED = Object.freeze({ id: 'painel-claude', name: 'Painel Claude', project: 'painel-claude', accessory: null });
+
 /**
- * @param {{ stage: HTMLElement, avatar: Function & { key: () => string }, core: Function,
+ * @param {{ stage: HTMLElement, avatar: Function & { key: () => string },
  *   onOpenSession: (session: object) => void, pinned: () => string[] }} options
- * `avatar(seed)` desenha o personagem escolhido; `core(seed)` o robô do núcleo.
+ * `avatar(seed)` desenha o personagem escolhido (nos círculos e no núcleo); `avatar.key()` muda quando o estilo muda.
  */
-export function createOrbit({ stage, avatar, core, onOpenSession, pinned = () => [] }) {
+export function createOrbit({ stage, avatar, onOpenSession, pinned = () => [] }) {
   const world = el('div', 'orbit-world');
   const links = svg('svg', { class: 'orbit-links', 'aria-hidden': 'true' });
   const rings = el('div', 'orbit-rings');
@@ -64,7 +67,7 @@ export function createOrbit({ stage, avatar, core, onOpenSession, pinned = () =>
   const nucleus = el('div', 'orbit-core');
   const coreFace = el('div', 'orbit-core-face');
   coreFace.setAttribute('aria-hidden', 'true');
-  coreFace.append(core({ id: 'painel-claude', name: 'Painel Claude', project: 'painel-claude', accessory: null }));
+  let coreKey = '';
   const coreCount = el('span', 'orbit-core-count');
   nucleus.append(coreFace, coreCount);
   const orbs = el('div', 'orbit-orbs');
@@ -326,6 +329,10 @@ export function createOrbit({ stage, avatar, core, onOpenSession, pinned = () =>
     stage.dataset.tone = tree.tone;
     coreCount.textContent = plural(tree.total, 'sessão', 'sessões');
     nucleus.dataset.tone = tree.tone;
+    if (coreKey !== avatar.key()) {
+      coreKey = avatar.key();
+      coreFace.replaceChildren(avatar(CORE_SEED));
+    }
     nucleus.setAttribute('aria-label', `Núcleo: ${coreCount.textContent}`);
     levelButtons.forEach((button) => button.setAttribute('aria-pressed', String(Number(button.dataset.level) === levels)));
     drawRings(layout);
