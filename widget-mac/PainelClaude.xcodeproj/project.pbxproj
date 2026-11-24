@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1AA279311A5A244BE16EBE60 /* Clawd.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF293364C3B0375B09599940 /* Clawd.swift */; };
 		29BB85109C53E077E049AD3E /* Armazem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1486336F26F3E03172199B22 /* Armazem.swift */; };
 		2D27B790861BBAE4753573AD /* Armazem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1486336F26F3E03172199B22 /* Armazem.swift */; };
 		4939C49B30715D034FD734E0 /* Modelo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30632654F4225D2F1E7AA27D /* Modelo.swift */; };
@@ -16,6 +17,7 @@
 		94F0A60D5CD367BF335EFB9D /* Formato.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40DD614A1CC6ED4550DB91AF /* Formato.swift */; };
 		A61993DA65EC2EFC34252344 /* Pacote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05FABE690E6EFE1714B9CE95 /* Pacote.swift */; };
 		A7D7E593B94D18CCA74C4798 /* PainelClaudeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 555D8866B8B6F7B5DEB665B1 /* PainelClaudeApp.swift */; };
+		CC9C2839DC5AD3B7C6F30BC1 /* Clawd.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF293364C3B0375B09599940 /* Clawd.swift */; };
 		CCD8CAEB833354A87E710886 /* Vistas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BFA0195913077CB786E7789 /* Vistas.swift */; };
 		CCE2D9C323E8D94BB49247BD /* Sincronizador.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C11E852C7155510705C84EA /* Sincronizador.swift */; };
 		CE520868B78F60959B846EB0 /* Robo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8984F56EDEBD35990B899E1 /* Robo.swift */; };
@@ -64,6 +66,7 @@
 		96FE9F090EFCA675C0E8BA8E /* PainelClaudeWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PainelClaudeWidget.entitlements; sourceTree = "<group>"; };
 		9BFA0195913077CB786E7789 /* Vistas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vistas.swift; sourceTree = "<group>"; };
 		9C11E852C7155510705C84EA /* Sincronizador.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sincronizador.swift; sourceTree = "<group>"; };
+		AF293364C3B0375B09599940 /* Clawd.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Clawd.swift; sourceTree = "<group>"; };
 		B936076E408ECEE3AE37D653 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		BCD4079AB29B40965BD2E149 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		D8984F56EDEBD35990B899E1 /* Robo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Robo.swift; sourceTree = "<group>"; };
@@ -76,6 +79,7 @@
 			isa = PBXGroup;
 			children = (
 				1486336F26F3E03172199B22 /* Armazem.swift */,
+				AF293364C3B0375B09599940 /* Clawd.swift */,
 				40DD614A1CC6ED4550DB91AF /* Formato.swift */,
 				30632654F4225D2F1E7AA27D /* Modelo.swift */,
 				D8984F56EDEBD35990B899E1 /* Robo.swift */,
@@ -212,6 +216,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				29BB85109C53E077E049AD3E /* Armazem.swift in Sources */,
+				CC9C2839DC5AD3B7C6F30BC1 /* Clawd.swift in Sources */,
 				73B2053CC9AB47583E6E6762 /* Cliente.swift in Sources */,
 				CF514929169A7234672F7822 /* Formato.swift in Sources */,
 				4939C49B30715D034FD734E0 /* Modelo.swift in Sources */,
@@ -227,6 +232,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2D27B790861BBAE4753573AD /* Armazem.swift in Sources */,
+				1AA279311A5A244BE16EBE60 /* Clawd.swift in Sources */,
 				94F0A60D5CD367BF335EFB9D /* Formato.swift in Sources */,
 				DE5C3EFA31A77D92FA8EC67C /* Intencoes.swift in Sources */,
 				630C8C90E352CA8254CF9CD4 /* Modelo.swift in Sources */,

@@ -1,7 +1,7 @@
 # Painel Claude — widget do macOS
 
 Widget de mesa e da Central de Notificações (pequeno, médio e grande) que mostra as sessões do Claude Code que
-o servidor do painel conhece, na mesma ordem do painel web, com o robozinho de cada uma. Quando uma sessão
+o servidor do painel conhece, na mesma ordem do painel web, com o Clawd de cada uma (parado, numa pose por situação). Quando uma sessão
 espera você, o widget mostra o pedido e deixa responder ali mesmo:
 
 | Pedido | Botões no widget |
@@ -33,7 +33,9 @@ servidor :7777 ──SSE──▶ app "Painel Claude" (barra de menus) ──est
   token. O botão (uma App Intent) grava a decisão em `decisoes/`, o app manda `POST /api/permissions/:id`
   com o token no cabeçalho e o widget volta já atualizado (leva uns 0,2 s).
 - O "há quanto tempo" anda sozinho: cada recarga gera 30 entradas, uma por minuto.
-- `Shared/Robo.swift` é o porte de `public/bot.js`: mesmo hash e mesmo sorteio, o robô sai igual ao da web.
+- `Shared/Clawd.swift` é o porte de `public/clawd.js`: mesmas peças e mesmos pixels. O WidgetKit não anima, então
+  cada situação vira uma pose parada (a cara que ele faz na web).
+- `Shared/Robo.swift` é o porte de `public/bot.js` (o robô de antes); dele o Clawd usa os ícones de atividade.
 
 ## Compilar e instalar
 
