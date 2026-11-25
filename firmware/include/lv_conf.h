@@ -4,8 +4,12 @@
 
 #define LV_COLOR_DEPTH 16
 
-/* Memória: malloc do sistema (na placa, alocações grandes caem na PSRAM). */
-#define LV_USE_STDLIB_MALLOC LV_STDLIB_CLIB
+/* Memória: no simulador, malloc do sistema; nas placas, na PSRAM (src/esp32/lv_mem_psram.cpp). */
+#ifdef PAINEL_SIM
+  #define LV_USE_STDLIB_MALLOC LV_STDLIB_CLIB
+#else
+  #define LV_USE_STDLIB_MALLOC LV_STDLIB_CUSTOM
+#endif
 #define LV_USE_STDLIB_STRING LV_STDLIB_CLIB
 #define LV_USE_STDLIB_SPRINTF LV_STDLIB_CLIB
 

@@ -80,6 +80,8 @@ void setup() {
   gApp = new painel::round::RoundApp(*gClient, options);
   gApp->build(lv_screen_active());
   if (touch) gApp->wrapTouch(touch);
+  Serial.printf("[painel] telas prontas: heap interno %u KB, PSRAM %u KB livres\n",
+                heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024, ESP.getFreePsram() / 1024);
 
   startWifi();
   gClient->start();
