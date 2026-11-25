@@ -1,7 +1,8 @@
-// Simulador do display de bancada no Mac: a mesma interface e o mesmo cliente HTTP/SSE da placa,
-// numa janela SDL de 480×480. Configuração por variáveis de ambiente:
+// Simulador do display de bancada no Mac: a mesma interface e o mesmo cliente HTTP/SSE da placa, numa janela
+// SDL de 480×480 (Guition) ou 466×466 com máscara redonda (PAINEL_ROUND, AMOLED de 1,75"). Configuração por
+// variáveis de ambiente:
 //   PAINEL_HOST (127.0.0.1)  PAINEL_PORT (7777)  PAINEL_TOKEN (senão lê ~/.config/painel-claude/config.json)
-//   PAINEL_TZ_OFFSET_MIN (-180)  PAINEL_SIM_CMDS (arquivo de comandos: tap/shot/wait/quit)
+//   PAINEL_TZ_OFFSET_MIN (-180)  PAINEL_SIM_CMDS (arquivo de comandos: tap/swipe/shot/wait/quit)
 #include <ArduinoJson.h>
 #include <lvgl.h>
 
@@ -10,15 +11,26 @@
 #include <sstream>
 #include <string>
 
+#ifdef PAINEL_ROUND
+#include "round/round_app.h"
+#else
 #include "app/app.h"
+#endif
 #include "app/client.h"
 #include "app/platform.h"
 #include "sim/sim_hooks.h"
 
 namespace {
 
+#ifdef PAINEL_ROUND
+constexpr int kWidth = 466;
+constexpr int kHeight = 466;
+constexpr bool kRound = true;
+#else
 constexpr int kWidth = 480;
 constexpr int kHeight = 480;
+constexpr bool kRound = false;
+#endif
 
 std::string env(const char* name, const std::string& fallback) {
   const char* value = std::getenv(name);
@@ -54,12 +66,19 @@ int main() {
   lv_display_t* display = lv_sdl_window_create(kWidth, kHeight);
   lv_sdl_window_set_title(display, "Painel Claude · bancada (simulador)");
   lv_indev_t* mouse = lv_sdl_mouse_create();
-  painel::sim::init(display);
+  painel::sim::init(display, kRound);
 
   painel::Client client(endpoint);
+  const int tz = std::atoi(env("PAINEL_TZ_OFFSET_MIN", "-180").c_str());
+#ifdef PAINEL_ROUND
+  painel::round::RoundOptions options;
+  options.tzOffsetMin = tz;
+  painel::round::RoundApp app(client, options);
+#else
   painel::AppOptions options;
-  options.tzOffsetMin = std::atoi(env("PAINEL_TZ_OFFSET_MIN", "-180").c_str());
+  options.tzOffsetMin = tz;
   painel::App app(client, options);
+#endif
   app.build(lv_screen_active());
   app.wrapTouch(mouse);
   app.wrapTouch(painel::sim::finger());

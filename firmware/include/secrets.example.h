@@ -21,3 +21,7 @@
 // Brilho (%): cheio com sessão esperando/rodando ou toque recente; baixo depois de um tempo parado.
 #define PAINEL_BRILHO_CHEIO 100
 #define PAINEL_BRILHO_BAIXO 10
+
+// Som do mostrador redondo (alto-falante no conector SPK) quando uma sessão passa a esperar você.
+// 0 a 100; 0 = mudo. A Guition não tem alto-falante e ignora.
+#define PAINEL_SOM_VOLUME 70

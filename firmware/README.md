@@ -11,6 +11,61 @@ Sessões do Claude Code ──hooks──▶ painel-claude no Mac (:7777) ──
 O mesmo código roda num **simulador no Mac** (janela SDL de 480×480), ligado ao servidor de verdade. Assim dá para
 mexer na interface sem a placa.
 
+## Mostrador redondo (Waveshare ESP32-S3-Touch-AMOLED-1.75)
+
+O mesmo cliente também roda na **Waveshare ESP32-S3-Touch-AMOLED-1.75** (inclui a `-G`, com GPS): AMOLED redonda
+de 1,75" e 466×466 com CO5300 por QSPI, toque CST9217, ESP32-S3R8 com 8 MB de PSRAM e 16 MB de flash. É um
+mostrador de mesa, mais de visão geral que de detalhe. Protótipo das telas no Claude Design:
+<https://claude.ai/artifact/8RZDAqUh62Z2nEUVsb6q49>.
+
+- **Três visões**, trocadas arrastando para o lado (as bolinhas embaixo mostram onde você está):
+  - **Visão geral**: o Mapa em órbita, com um Clawd por sessão em movimento (até 8) e o Clawd grande no meio.
+    O do meio mostra a situação mais urgente: pula e acena (esperando você), anda digitando (rodando), comemora
+    (terminou), olhos de X (erro) ou dorme com zzz (tudo parado). Tocar nele faz ele pular com um coração.
+  - **Sessões**: lista com o Clawd, o ícone da atividade e a palavra do tile ("APROVAR?", "EDITANDO"…).
+  - **Uso do plano**: janela de 5 h por fora e semana por dentro, com o tracinho do ritmo e quando zera.
+- **Detalhe**: toque numa sessão. Mostra o Clawd dela, o contexto no anel, os números e o que está fazendo.
+  Arrastar para baixo ou tocar no ^ volta.
+- **Esperando você**: o pedido novo abre sozinho, com a borda pulsando em vermelho e **Permitir / Negar** (ou
+  **Aprovar / Recusar** o plano). Depois de responder, vai para o próximo pedido. Pergunta com opções fica para o
+  Mac ou o celular.
+- **Som**: quando uma sessão passa a esperar você, toca um "plim-plim" curto (gerado na hora, sem arquivo) no
+  alto-falante do kit, ligado no conector **SPK**. O volume é `PAINEL_SOM_VOLUME` em `secrets.h` (0 a 100; 0 =
+  mudo). Ao ligar, quem já esperava não toca de novo. A antena de GPS não é usada: pode ficar fora.
+- **Brilho**: o mesmo da Guition, mas pelo comando de brilho do próprio AMOLED (não há backlight).
+- Fundo preto puro: no AMOLED o pixel preto fica apagado e a borda do vidro some.
+
+Gravar (o `secrets.h` é o mesmo da Guition). A placa usa o USB nativo do ESP32-S3, então a porta aparece como
+`/dev/cu.usbmodem*`:
+
+```bash
+pio run -e amoled -t upload
+```
+
+```bash
+pio device monitor -e amoled
+```
+
+Se o upload não começar, segure **BOOT**, aperte e solte **RST** e solte **BOOT**. No monitor devem aparecer
+`[toque] CST9217 em 0x5A` e `[wifi] conectado: …`.
+
+Simulador redondo (janela de 466×466 com máscara redonda; aceita `swipe X1 Y1 X2 Y2` nos comandos; o som sai no
+alto-falante do Mac, com `PAINEL_SOM_VOLUME=0` para calar):
+
+```bash
+pio run -e sim-round && .pio/build/sim-round/program
+```
+
+| Sintoma na primeira vez | O que mexer |
+|---|---|
+| Imagem deslocada alguns pixels para o lado | `kColumnOffset` em `src/board_amoled/pins.h` (6 é o valor da Waveshare) |
+| Toque espelhado ou trocado | em `src/board_amoled/touch.cpp`, a função `read` já espelha X e Y como o BSP da Waveshare; se vier ao contrário, tire o `kWidth - 1 -` |
+| Sem som | confira o alto-falante no conector SPK e `[som] ES8311 pronto` no monitor; `PAINEL_SOM_VOLUME` acima de 0 |
+| Cores trocadas | troque `draw16bitRGBBitmap` por `draw16bitBeRGBBitmap` em `src/board_amoled/display.cpp` |
+
+Pinos e endereços vieram do `HARDWARE_REFERENCE.md` do repositório `waveshareteam/ESP32-S3-Touch-AMOLED-1.75`.
+Tela pela Arduino_GFX 1.6.9 e toque pela SensorLib 0.5.2.
+
 ## O que tem na tela
 
 - **Grade 4×4 com páginas.** Deslize para o lado ou toque nas setas. A ordem vem do servidor: primeiro quem espera
@@ -127,9 +182,15 @@ src/app/     comum à placa e ao simulador, sem LVGL
   http       HTTP/1.0 mínimo + parser de SSE
   client     thread do SSE (reconexão com backoff) + thread das chamadas avulsas; fila para a interface
   bot        robozinho: porte fiel de public/bot.js (mesmo hash, mesmo xorshift, mesmos chapéus)
+  clawd      Clawd: porte de public/clawd.js e das animações de clawd.css (poses em degraus)
+  wake       brilho e toque (a tela escura só acende no primeiro toque), comum às duas placas
+  link_screen  texto da tela de estado (Wi-Fi, Mac sem resposta, token recusado)
   format     textos ("terminou · ver", "3 min", "84k")
   app        liga cliente e telas, barra do topo, telas de estado e brilho
-src/ui/      LVGL: tema (cores da web), grade, detalhe, robô num canvas
+src/ui/      LVGL: tema (cores da web), grade, detalhe, robô e Clawd num canvas
+src/round/   mostrador redondo: carrossel (visão geral, sessões, uso), detalhe e tela de estado
+src/board_amoled/  Waveshare AMOLED 1,75": CO5300 (Arduino_GFX), CST9217 (SensorLib) e main
+src/esp32/   comum às placas ESP32: TCP pelo WiFiClient, mDNS e pthreads
 src/board/   placa: ST7701 (init por SPI de 3 fios em software + painel RGB com bounce buffer), GT911,
              Wi-Fi/TCP, mDNS e PWM do brilho
 src/sim/     simulador: sockets POSIX, janela SDL, toque e captura por script

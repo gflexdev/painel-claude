@@ -20,14 +20,20 @@ struct Touch {
   int x = 0;
   int y = 0;
   int frames = 0;  // >0 = pressionado por mais N leituras
+  int dx = 0;      // passo por leitura (arrastar)
+  int dy = 0;
   bool releasePending = false;
 } gTouch;
+
+constexpr int kSwipeFrames = 10;
 
 void readFinger(lv_indev_t*, lv_indev_data_t* data) {
   data->point.x = gTouch.x;
   data->point.y = gTouch.y;
   if (gTouch.frames > 0) {
     --gTouch.frames;
+    gTouch.x += gTouch.dx;
+    gTouch.y += gTouch.dy;
     data->state = LV_INDEV_STATE_PRESSED;
     gTouch.releasePending = true;
   } else {
@@ -80,8 +86,17 @@ void execute(const std::string& line) {
   in >> cmd;
   if (cmd == "tap") {
     in >> gTouch.x >> gTouch.y;
+    gTouch.dx = gTouch.dy = 0;
     gTouch.frames = 3;
     gWaitUntil = platform::monoMs() + 250;
+  } else if (cmd == "swipe") {
+    int x2 = 0;
+    int y2 = 0;
+    in >> gTouch.x >> gTouch.y >> x2 >> y2;
+    gTouch.dx = (x2 - gTouch.x) / kSwipeFrames;
+    gTouch.dy = (y2 - gTouch.y) / kSwipeFrames;
+    gTouch.frames = kSwipeFrames + 1;
+    gWaitUntil = platform::monoMs() + 700;
   } else if (cmd == "shot") {
     std::string path;
     in >> path;
@@ -98,13 +113,29 @@ void execute(const std::string& line) {
 
 }  // namespace
 
-void init(lv_display_t* display) {
+/** Tela redonda: um anel preto cobre os cantos que o vidro de verdade não tem. */
+void addRoundMask(lv_display_t* display) {
+  constexpr int kRing = 120;
+  const int w = lv_display_get_horizontal_resolution(display);
+  lv_obj_t* mask = lv_obj_create(lv_display_get_layer_sys(display));
+  lv_obj_remove_style_all(mask);
+  lv_obj_set_size(mask, w + 2 * kRing, w + 2 * kRing);
+  lv_obj_set_pos(mask, -kRing, -kRing);
+  lv_obj_set_style_radius(mask, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_border_width(mask, kRing, 0);
+  lv_obj_set_style_border_color(mask, lv_color_hex(0x1b1d22), 0);
+  lv_obj_set_style_border_opa(mask, LV_OPA_COVER, 0);
+  lv_obj_remove_flag(mask, LV_OBJ_FLAG_CLICKABLE);
+}
+
+void init(lv_display_t* display, bool round) {
   gVeil = lv_obj_create(lv_display_get_layer_sys(display));
   lv_obj_remove_style_all(gVeil);
   lv_obj_set_size(gVeil, lv_pct(100), lv_pct(100));
   lv_obj_set_style_bg_color(gVeil, lv_color_black(), 0);
   lv_obj_set_style_bg_opa(gVeil, LV_OPA_TRANSP, 0);
   lv_obj_remove_flag(gVeil, LV_OBJ_FLAG_CLICKABLE);
+  if (round) addRoundMask(display);
 
   gFinger = lv_indev_create();
   lv_indev_set_type(gFinger, LV_INDEV_TYPE_POINTER);

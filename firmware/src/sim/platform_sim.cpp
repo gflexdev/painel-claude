@@ -1,4 +1,5 @@
-// Plataforma do simulador (macOS/Linux): sockets POSIX, std::chrono e um "brilho" simulado.
+// Plataforma do simulador (macOS/Linux): sockets POSIX, std::chrono, um "brilho" simulado e o som pelo SDL.
+#include <SDL.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netdb.h>
@@ -10,6 +11,7 @@
 #include <chrono>
 #include <cstdarg>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <mutex>
 #include <thread>
@@ -121,5 +123,33 @@ void log(const char* fmt, ...) {
 }
 
 void setBacklight(uint8_t percent) { sim::setBrightness(percent); }
+
+/** Toca no alto-falante do Mac. PAINEL_SOM_VOLUME (0–100, padrão 70; 0 = mudo). */
+void playChime(Chime chime) {
+  static SDL_AudioDeviceID device = 0;
+  const char* env = std::getenv("PAINEL_SOM_VOLUME");
+  const int volume = env && *env ? std::atoi(env) : 70;
+  const std::vector<int16_t> pcm = renderChime(chime, volume);
+  log("[sim] som %d (volume %d)", static_cast<int>(chime), volume);
+  if (pcm.empty()) return;
+  if (!device) {
+    if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0) {
+      log("[sim] sem áudio: %s", SDL_GetError());
+      return;
+    }
+    SDL_AudioSpec want{};
+    want.freq = kChimeSampleRate;
+    want.format = AUDIO_S16SYS;
+    want.channels = 1;
+    want.samples = 1024;
+    device = SDL_OpenAudioDevice(nullptr, 0, &want, nullptr, 0);
+    if (!device) {
+      log("[sim] sem áudio: %s", SDL_GetError());
+      return;
+    }
+    SDL_PauseAudioDevice(device, 0);
+  }
+  SDL_QueueAudio(device, pcm.data(), static_cast<Uint32>(pcm.size() * sizeof(int16_t)));
+}
 
 }  // namespace painel::platform

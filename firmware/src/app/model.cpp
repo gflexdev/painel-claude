@@ -34,6 +34,7 @@ Session readSession(JsonObjectConst o) {
   s.model = str(o["model"]);
   s.unseen = o["unseen"] | false;
   s.stale = o["stale"] | false;
+  s.archived = o["archived"] | false;
   s.since = num(o["since"], 0);
   s.lastEventAt = num(o["lastEventAt"], 0);
   s.contextTokens = num(o["contextTokens"], -1);
@@ -47,6 +48,32 @@ Session readSession(JsonObjectConst o) {
     s.permission.count = static_cast<int>(num(p["count"], 1));
   }
   return s;
+}
+
+int percentOf(JsonVariantConst v) {
+  const int64_t p = num(v, 0);
+  return static_cast<int>(p < 0 ? 0 : p > 100 ? 100 : p);
+}
+
+UsageWindow readWindow(JsonObjectConst o) {
+  UsageWindow w;
+  if (o.isNull() || !(o["usedPercentage"].is<double>() || o["usedPercentage"].is<int64_t>())) return w;
+  w.known = true;
+  w.percent = percentOf(o["usedPercentage"]);
+  w.resetsAt = num(o["resetsAt"], 0);
+  return w;
+}
+
+Usage readUsage(JsonObjectConst o) {
+  Usage u;
+  if (o.isNull()) return u;
+  u.fiveHour = readWindow(o["fiveHour"]);
+  u.sevenDay = readWindow(o["sevenDay"]);
+  for (JsonObjectConst s : o["scoped"].as<JsonArrayConst>()) {
+    if (s["label"].isNull()) continue;
+    u.scoped.push_back({str(s["label"], 24), percentOf(s["usedPercentage"]), num(s["resetsAt"], 0)});
+  }
+  return u;
 }
 
 Request readRequest(JsonObjectConst o) {
@@ -84,6 +111,7 @@ bool parseSnapshot(const char* json, size_t len, Snapshot& out, std::string& err
   snap.now = num(doc["now"], 0);
   snap.version = str(doc["version"]);
   for (JsonObjectConst s : doc["sessions"].as<JsonArrayConst>()) snap.sessions.push_back(readSession(s));
+  snap.usage = readUsage(doc["usage"]);
   out = std::move(snap);
   return true;
 }
