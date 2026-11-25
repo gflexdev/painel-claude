@@ -4,8 +4,12 @@
 
 #define LV_COLOR_DEPTH 16
 
-/* Memória: malloc do sistema (na placa, alocações grandes caem na PSRAM). */
-#define LV_USE_STDLIB_MALLOC LV_STDLIB_CLIB
+/* Memória: no simulador, malloc do sistema; nas placas, na PSRAM (src/esp32/lv_mem_psram.cpp). */
+#ifdef PAINEL_SIM
+  #define LV_USE_STDLIB_MALLOC LV_STDLIB_CLIB
+#else
+  #define LV_USE_STDLIB_MALLOC LV_STDLIB_CUSTOM
+#endif
 #define LV_USE_STDLIB_STRING LV_STDLIB_CLIB
 #define LV_USE_STDLIB_SPRINTF LV_STDLIB_CLIB
 
@@ -24,7 +28,8 @@
 #define LV_FONT_MONTSERRAT_20 1
 #define LV_FONT_CUSTOM_DECLARE \
   LV_FONT_DECLARE(font_mono_12) LV_FONT_DECLARE(font_mono_14) LV_FONT_DECLARE(font_mono_16) \
-  LV_FONT_DECLARE(font_disp_15) LV_FONT_DECLARE(font_disp_18) LV_FONT_DECLARE(font_disp_24)
+  LV_FONT_DECLARE(font_disp_15) LV_FONT_DECLARE(font_disp_18) LV_FONT_DECLARE(font_disp_24) \
+  LV_FONT_DECLARE(font_disp_32) LV_FONT_DECLARE(font_num_96)
 #define LV_FONT_DEFAULT &font_mono_14
 #define LV_USE_FONT_PLACEHOLDER 1
 

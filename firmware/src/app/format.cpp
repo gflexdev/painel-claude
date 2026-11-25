@@ -83,6 +83,14 @@ std::string clockText(int64_t epochMs, int tzOffsetMin) {
   return buf;
 }
 
+std::string weekdayClock(int64_t epochMs, int tzOffsetMin) {
+  if (epochMs <= 0) return "--";
+  static const char* const kDays[7] = {"qui", "sex", "sáb", "dom", "seg", "ter", "qua"};  // 1/1/1970 foi quinta
+  const int64_t minutes = epochMs / 60000 + tzOffsetMin;
+  const int64_t day = minutes >= 0 ? minutes / 1440 : (minutes - 1439) / 1440;
+  return std::string(kDays[((day % 7) + 7) % 7]) + " " + clockText(epochMs, tzOffsetMin);
+}
+
 std::string oneLine(const std::string& text) {
   std::string out;
   out.reserve(text.size());

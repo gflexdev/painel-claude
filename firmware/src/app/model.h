@@ -26,6 +26,7 @@ struct Session {
   std::string model;
   bool unseen = false;
   bool stale = false;
+  bool archived = false;
   int64_t since = 0;
   int64_t lastEventAt = 0;
   int64_t contextTokens = -1;  // -1 = sem dado
@@ -34,10 +35,32 @@ struct Session {
   PermissionRef permission;
 };
 
+/** Uma janela de limite do plano (5 h ou 7 dias): quanto já foi usado e quando zera. */
+struct UsageWindow {
+  bool known = false;
+  int percent = 0;
+  int64_t resetsAt = 0;  // epoch ms
+};
+
+/** Limite só de um modelo (ex.: "Fable"), quando o plano tem. */
+struct ScopedUsage {
+  std::string label;
+  int percent = 0;
+  int64_t resetsAt = 0;
+};
+
+/** Uso do plano, como a status line do Claude Code manda em `rate_limits`. */
+struct Usage {
+  UsageWindow fiveHour;
+  UsageWindow sevenDay;
+  std::vector<ScopedUsage> scoped;
+};
+
 struct Snapshot {
   int64_t now = 0;
   std::string version;
   std::vector<Session> sessions;
+  Usage usage;
 };
 
 struct Option {

@@ -1,4 +1,5 @@
-// Plataforma da placa: TCP pelo WiFiClient, mDNS para nomes .local, pthreads com pilha maior e brilho por PWM.
+// Plataforma comum às placas ESP32: TCP pelo WiFiClient, mDNS para nomes .local e pthreads com pilha maior.
+// O brilho (setBacklight) fica na pasta de cada placa.
 #include <Arduino.h>
 #include <ESPmDNS.h>
 #include <WiFi.h>
@@ -9,7 +10,6 @@
 #include <mutex>
 
 #include "app/platform.h"
-#include "board/pins.h"
 
 namespace painel::platform {
 namespace {
@@ -127,13 +127,6 @@ void log(const char* fmt, ...) {
   vsnprintf(buf, sizeof buf, fmt, args);
   va_end(args);
   Serial.println(buf);
-}
-
-void setBacklight(uint8_t percent) {
-  static bool attached = false;
-  if (!attached) attached = ledcAttach(board::kBacklight, board::kBacklightHz, 10);
-  const uint32_t duty = static_cast<uint32_t>(percent > 100 ? 100 : percent) * 1023 / 100;
-  ledcWrite(board::kBacklight, duty);
 }
 
 }  // namespace painel::platform

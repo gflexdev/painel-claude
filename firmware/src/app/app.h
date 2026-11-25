@@ -10,6 +10,7 @@
 
 #include "app/client.h"
 #include "app/model.h"
+#include "app/wake.h"
 #include "ui/bot_view.h"
 #include "ui/detail.h"
 #include "ui/grid.h"
@@ -35,10 +36,10 @@ class App {
   /** Chame no laço principal, junto com lv_timer_handler(). */
   void loop();
   /** Embrulha a leitura do toque: com a tela escura, o primeiro toque só acende (não clica). */
-  void wrapTouch(lv_indev_t* indev);
+  void wrapTouch(lv_indev_t* indev) { wake_.wrapTouch(indev); }
   /** Recado da plataforma para a tela de estado (ex.: "Conectando ao Wi-Fi casa…"); vazio = nada. */
   void setNetworkNote(const std::string& note);
-  uint8_t brightness() const { return brightness_; }
+  uint8_t brightness() const { return wake_.brightness(); }
 
  private:
   void handle(ClientEvent& ev);
@@ -47,11 +48,8 @@ class App {
   void renderTopbar();
   void updateDot(int mode);
   void renderStatusScreen();
-  void updateBacklight();
   int64_t serverNow() const;
-  bool shouldStayBright() const;
-
-  static void readTouch(lv_indev_t* indev, lv_indev_data_t* data);
+  bool busy() const;
 
   Client& client_;
   AppOptions opt_;
@@ -81,17 +79,7 @@ class App {
   std::string networkNote_;
 
   int64_t lastSecond_ = 0;
-  int64_t lastTouch_ = 0;
-  int64_t lastActive_ = 0;
-  uint8_t brightness_ = 0;
-  int64_t lastFade_ = 0;
-
-  struct WrappedTouch {
-    lv_indev_t* indev;
-    lv_indev_read_cb_t original;
-  };
-  std::vector<WrappedTouch> touches_;
-  bool swallowing_ = false;
+  Wake wake_;
   int dotMode_ = -1;
 };
 

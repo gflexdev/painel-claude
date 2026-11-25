@@ -8,14 +8,15 @@
 
 namespace painel::sim {
 
-/** Cria o véu de brilho e o "dedo" virtual. Chame depois de criar o display. */
-void init(lv_display_t* display);
+/** Cria o véu de brilho e o "dedo" virtual. Chame depois de criar o display. `round` = máscara redonda. */
+void init(lv_display_t* display, bool round = false);
 void setBrightness(uint8_t percent);
 /** O "dedo" que os comandos tap usam (para passar pelo mesmo filtro de toque do mouse). */
 lv_indev_t* finger();
 /**
  * Lê comandos de `path` (se existir), executa e apaga o arquivo. Uma linha por comando:
  *   tap X Y          toque rápido
+ *   swipe X1 Y1 X2 Y2  arrasta o dedo de um ponto a outro (~300 ms)
  *   shot ARQ.bmp     salva a tela (sem o véu de brilho)
  *   wait MS          espera antes do próximo comando
  *   quit             fecha o simulador

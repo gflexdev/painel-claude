@@ -22,6 +22,8 @@ std::string tokens(int64_t count);
 std::string accessoryOf(const Session& session);
 /** Hora local "HH:MM" a partir de epoch em ms e do fuso em minutos. */
 std::string clockText(int64_t epochMs, int tzOffsetMin);
+/** Dia da semana e hora local, "qui 21:00". */
+std::string weekdayClock(int64_t epochMs, int tzOffsetMin);
 /** Tira quebras de linha (para linhas únicas). */
 std::string oneLine(const std::string& text);
 

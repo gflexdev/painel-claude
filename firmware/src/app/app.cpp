@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "app/format.h"
+#include "app/link_screen.h"
 #include "app/platform.h"
 #include "ui/theme.h"
 
@@ -12,18 +13,21 @@ namespace {
 using namespace ui;
 
 constexpr int kTopbarHeight = 46;
-constexpr int64_t kFadeStepMs = 20;
-constexpr int kFadeUpPerStep = 8;    // ~250 ms até o cheio
-constexpr int kFadeDownPerStep = 1;  // ~2 s até o baixo
-constexpr int64_t kNeverConnectedGraceMs = 8000;
 
-App* gTouchOwner = nullptr;  // só há um App; o callback do LVGL não carrega ponteiro próprio
+WakeOptions wakeOptions(const AppOptions& o) {
+  WakeOptions w;
+  w.brightFull = o.brightFull;
+  w.brightLow = o.brightLow;
+  w.touchAwakeMs = o.touchAwakeMs;
+  w.dimAfterMs = o.dimAfterMs;
+  return w;
+}
 
 void blinkDot(void* obj, int32_t v) { lv_obj_set_style_opa(static_cast<lv_obj_t*>(obj), v < 50 ? LV_OPA_COVER : LV_OPA_20, 0); }
 
 }  // namespace
 
-App::App(Client& client, AppOptions options) : client_(client), opt_(options) {}
+App::App(Client& client, AppOptions options) : client_(client), opt_(options), wake_(wakeOptions(options)) {}
 
 int64_t App::serverNow() const {
   if (!snapshot_) return 0;
@@ -32,7 +36,6 @@ int64_t App::serverNow() const {
 
 void App::build(lv_obj_t* screen) {
   startedMono_ = platform::monoMs();
-  lastActive_ = startedMono_;
   lv_obj_set_style_bg_color(screen, hex(color::kBg), 0);
   lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, 0);
   lv_obj_remove_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
@@ -111,7 +114,7 @@ void App::build(lv_obj_t* screen) {
 
   renderTopbar();
   renderStatusScreen();
-  updateBacklight();
+  wake_.update(busy());
 }
 
 void App::setNetworkNote(const std::string& note) {
@@ -129,7 +132,7 @@ void App::loop() {
     lastSecond_ = now;
     tickSecond();
   }
-  updateBacklight();
+  wake_.update(busy());
 }
 
 void App::handle(ClientEvent& ev) {
@@ -241,94 +244,38 @@ void App::updateDot(int mode) {
 }
 
 void App::renderStatusScreen() {
-  const int64_t now = platform::monoMs();
   const auto& ep = client_.endpoint();
-  const std::string where = ep.host + ":" + std::to_string(ep.port);
-  std::string title;
-  std::string text;
-  std::string hint;
-  uint32_t botColor = color::kInkDim;
+  LinkState st;
+  st.link = link_;
+  st.linkMessage = linkMessage_;
+  st.networkNote = networkNote_;
+  st.where = ep.host + ":" + std::to_string(ep.port);
+  st.now = platform::monoMs();
+  st.startedAt = startedMono_;
+  st.offlineSince = offlineSince_;
+  st.lastContact = client_.lastContactMs();
+  st.retryAt = retryAt_;
+  st.offlineScreenAfterMs = opt_.offlineScreenAfterMs;
+  const LinkScreen screen = describeLink(st);
 
-  if (link_ == Link::Unauthorized) {
-    title = "Token recusado pelo Mac";
-    text = "O servidor em " + where + " não aceitou o token gravado na placa.";
-    hint = "Confira PAINEL_TOKEN em include/secrets.h (o campo token de ~/.config/painel-claude/config.json) e grave de novo.";
-    botColor = color::kWaiting;
-  } else if (link_ != Link::Online && !networkNote_.empty() && now - startedMono_ > kNeverConnectedGraceMs) {
-    title = networkNote_;
-    text = "Sem Wi-Fi não dá para falar com o Mac.";
-    hint = "Confira PAINEL_WIFI_SSID e a senha em include/secrets.h (rede de 2,4 GHz).";
-    botColor = color::kWorking;
-  } else if (link_ != Link::Online) {
-    const int64_t contact = client_.lastContactMs();
-    const bool neverConnected = contact == 0 && now - startedMono_ > kNeverConnectedGraceMs;
-    const bool longOffline = offlineSince_ > 0 && now - offlineSince_ > opt_.offlineScreenAfterMs;
-    if (neverConnected || longOffline) {
-      title = contact ? "Mac sem resposta há " + elapsed(contact, now) : "Mac sem resposta";
-      text = linkMessage_.empty() ? where
-             : linkMessage_.find(where) != std::string::npos ? linkMessage_
-                                                             : linkMessage_ + "\n" + where;
-      const int64_t wait = retryAt_ - now;
-      hint = wait > 1000 ? "tentando de novo em " + std::to_string((wait + 999) / 1000) + " s" : "tentando de novo…";
-      botColor = color::kWaiting;
-    }
-  }
-
-  if (title.empty()) {
+  if (screen.tone == LinkScreen::Tone::None) {
     lv_obj_add_flag(statusScreen_, LV_OBJ_FLAG_HIDDEN);
     return;
   }
+  const uint32_t botColor = screen.tone == LinkScreen::Tone::Warn ? color::kWorking : color::kWaiting;
   statusBot_.draw({"painel-bancada", "mac", "", botColor, color::kBg, color::kInkDim});
-  lv_label_set_text(statusTitle_, title.c_str());
-  lv_label_set_text(statusText_, text.c_str());
-  lv_label_set_text(statusHint_, hint.c_str());
+  lv_label_set_text(statusTitle_, screen.title.c_str());
+  lv_label_set_text(statusText_, screen.text.c_str());
+  lv_label_set_text(statusHint_, screen.hint.c_str());
   lv_obj_remove_flag(statusScreen_, LV_OBJ_FLAG_HIDDEN);
   lv_obj_move_foreground(statusScreen_);
 }
 
-bool App::shouldStayBright() const {
-  const int64_t now = platform::monoMs();
-  if (now - lastTouch_ < opt_.touchAwakeMs && lastTouch_ > 0) return true;
+bool App::busy() const {
   if (!snapshot_ || link_ != Link::Online) return false;
   return std::any_of(snapshot_->sessions.begin(), snapshot_->sessions.end(), [](const Session& s) {
     return s.status == "waiting" || (s.status == "working" && !s.stale);
   });
-}
-
-void App::updateBacklight() {
-  const int64_t now = platform::monoMs();
-  if (shouldStayBright()) lastActive_ = now;
-  const uint8_t target = now - lastActive_ < opt_.dimAfterMs ? opt_.brightFull : opt_.brightLow;
-  if (brightness_ == target || now - lastFade_ < kFadeStepMs) return;
-  lastFade_ = now;
-  int next = brightness_;
-  if (target > brightness_) next = std::min<int>(target, brightness_ + kFadeUpPerStep);
-  else next = std::max<int>(target, brightness_ - kFadeDownPerStep);
-  brightness_ = static_cast<uint8_t>(next);
-  platform::setBacklight(brightness_);
-}
-
-void App::wrapTouch(lv_indev_t* indev) {
-  gTouchOwner = this;
-  touches_.push_back({indev, lv_indev_get_read_cb(indev)});
-  lv_indev_set_read_cb(indev, readTouch);
-}
-
-void App::readTouch(lv_indev_t* indev, lv_indev_data_t* data) {
-  App* self = gTouchOwner;
-  for (const WrappedTouch& t : self->touches_) {
-    if (t.indev == indev) t.original(indev, data);
-  }
-  const bool pressed = data->state == LV_INDEV_STATE_PRESSED;
-  if (pressed) {
-    const bool dim = self->brightness_ < (self->opt_.brightFull + self->opt_.brightLow) / 2;
-    if (dim && !self->swallowing_) self->swallowing_ = true;  // tela escura: este toque só acende
-    self->lastTouch_ = platform::monoMs();
-    self->lastActive_ = self->lastTouch_;
-  } else {
-    self->swallowing_ = false;
-  }
-  if (self->swallowing_) data->state = LV_INDEV_STATE_RELEASED;
 }
 
 }  // namespace painel

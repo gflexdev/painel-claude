@@ -6,6 +6,8 @@
 #include <memory>
 #include <string>
 
+#include "app/chime.h"
+
 namespace painel::platform {
 
 /** Conexão TCP simples. read devolve >0 bytes lidos, 0 se deu timeout, -1 se fechou ou falhou. */
@@ -30,5 +32,8 @@ void log(const char* fmt, ...);
 
 /** Brilho da tela em % (0–100). */
 void setBacklight(uint8_t percent);
+
+/** Toca um som curto sem travar a interface. Placa sem alto-falante: não faz nada. */
+void playChime(Chime chime);
 
 }  // namespace painel::platform
