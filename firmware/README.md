@@ -31,7 +31,8 @@ mostrador de mesa, mais de visão geral que de detalhe. Protótipo das telas no 
   Mac ou o celular.
 - **Som**: quando uma sessão passa a esperar você, toca um "plim-plim" curto (gerado na hora, sem arquivo) no
   alto-falante do kit, ligado no conector **SPK**. O volume é `PAINEL_SOM_VOLUME` em `secrets.h` (0 a 100; 0 =
-  mudo). Ao ligar, quem já esperava não toca de novo. A antena de GPS não é usada: pode ficar fora.
+  mudo). Ao ligar, quem já esperava não toca de novo. O amplificador fica ligado o tempo todo (ligado só na hora
+  do som, ele não acordava a tempo e o alto-falante ficava mudo). A antena de GPS não é usada: pode ficar fora.
 - **Brilho**: o mesmo da Guition, mas pelo comando de brilho do próprio AMOLED (não há backlight).
 - Fundo preto puro: no AMOLED o pixel preto fica apagado e a borda do vidro some.
 
@@ -47,7 +48,8 @@ pio device monitor -e amoled
 ```
 
 Se o upload não começar, segure **BOOT**, aperte e solte **RST** e solte **BOOT**. No monitor devem aparecer
-`[toque] CST9217 em 0x5A` e `[wifi] conectado: …`.
+`[toque] CST9217 em 0x5A`, `[som] ES8311 pronto`, `[painel] telas prontas: heap interno … KB` e
+`[wifi] conectado: …`. Gravado e conferido na placa em 25/11/2026: imagem centrada, toque no lugar certo e som.
 
 Simulador redondo (janela de 466×466 com máscara redonda; aceita `swipe X1 Y1 X2 Y2` nos comandos; o som sai no
 alto-falante do Mac, com `PAINEL_SOM_VOLUME=0` para calar):
@@ -60,7 +62,7 @@ pio run -e sim-round && .pio/build/sim-round/program
 |---|---|
 | Imagem deslocada alguns pixels para o lado | `kColumnOffset` em `src/board_amoled/pins.h` (6 é o valor da Waveshare) |
 | Toque espelhado ou trocado | em `src/board_amoled/touch.cpp`, a função `read` já espelha X e Y como o BSP da Waveshare; se vier ao contrário, tire o `kWidth - 1 -` |
-| Sem som | confira o alto-falante no conector SPK e `[som] ES8311 pronto` no monitor; `PAINEL_SOM_VOLUME` acima de 0 |
+| Sem som | confira o alto-falante no conector SPK (não no BAT, que é igual) e, no monitor, `[som] ES8311 pronto` e `[som] tocou …` a cada aviso; `PAINEL_SOM_VOLUME` acima de 0 |
 | Cores trocadas | troque `draw16bitRGBBitmap` por `draw16bitBeRGBBitmap` em `src/board_amoled/display.cpp` |
 
 Pinos e endereços vieram do `HARDWARE_REFERENCE.md` do repositório `waveshareteam/ESP32-S3-Touch-AMOLED-1.75`.

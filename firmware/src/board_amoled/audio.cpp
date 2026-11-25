@@ -1,5 +1,6 @@
 // Som da Waveshare AMOLED 1,75": codec ES8311 (I2C 0x18, no mesmo barramento do toque) recebendo I2S e o
-// amplificador NS4150B, ligado pelo GPIO46 só enquanto toca. Registros e divisores conferidos com o exemplo
+// amplificador NS4150B, ligado pelo GPIO46 desde o início, como no exemplo da Waveshare (ligar só na hora do som
+// não dava tempo para o circuito de controle dele: o I2S tocava e o alto-falante ficava mudo). Registros e divisores conferidos com o exemplo
 // 08_ES8311 da Waveshare (MCLK de 4,096 MHz = 256 × 16 kHz).
 #include "board_amoled/audio.h"
 
@@ -18,7 +19,7 @@ namespace board {
 namespace {
 
 constexpr uint8_t kCodec = 0x18;
-constexpr int kAmpWarmupMs = 30;   // o NS4150B leva uns ms para ligar sem estalo
+constexpr int kLeadInMs = 80;      // silêncio antes do som, para a saída do codec assentar
 constexpr int kTailMs = 60;        // silêncio no fim antes de desligar o amplificador
 constexpr size_t kChunkFrames = 256;
 
@@ -73,18 +74,22 @@ bool initCodec(int volume) {
 }
 
 void play(const std::vector<int16_t>& mono) {
-  digitalWrite(kAmpEnable, HIGH);
-  delay(kAmpWarmupMs);
+  size_t written = 0;
   int16_t frames[kChunkFrames * 2];
+  std::fill(std::begin(frames), std::end(frames), 0);
+  const size_t lead = static_cast<size_t>(painel::kChimeSampleRate) * kLeadInMs / 1000;
+  for (size_t i = 0; i < lead; i += kChunkFrames) gI2s.write(reinterpret_cast<uint8_t*>(frames), sizeof frames);
   for (size_t i = 0; i < mono.size(); i += kChunkFrames) {
     const size_t n = std::min(kChunkFrames, mono.size() - i);
     for (size_t k = 0; k < n; ++k) frames[2 * k] = frames[2 * k + 1] = mono[i + k];  // mesmo som nos dois canais
-    gI2s.write(reinterpret_cast<uint8_t*>(frames), n * 2 * sizeof(int16_t));
+    written += gI2s.write(reinterpret_cast<uint8_t*>(frames), n * 2 * sizeof(int16_t));
   }
   std::fill(std::begin(frames), std::end(frames), 0);
   const size_t tail = static_cast<size_t>(painel::kChimeSampleRate) * kTailMs / 1000;
   for (size_t i = 0; i < tail; i += kChunkFrames) gI2s.write(reinterpret_cast<uint8_t*>(frames), sizeof frames);
-  digitalWrite(kAmpEnable, LOW);
+  Serial.printf("[som] tocou %u amostras, %u bytes no I2S, reg32=0x%02X reg31=0x%02X reg12=0x%02X\n",
+                static_cast<unsigned>(mono.size()), static_cast<unsigned>(written), readReg(0x32), readReg(0x31),
+                readReg(0x12));
 }
 
 void audioTask(void*) {
@@ -114,6 +119,7 @@ void startAudio(int volumePercent) {
     Serial.println("[som] ES8311 não respondeu em 0x18");
     return;
   }
+  digitalWrite(kAmpEnable, HIGH);
   gQueue = xQueueCreate(4, sizeof(painel::Chime));
   xTaskCreatePinnedToCore(audioTask, "som", 4096, nullptr, 2, nullptr, 0);
   gReady = true;

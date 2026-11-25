@@ -9,7 +9,7 @@ namespace {
 constexpr double kPi = 3.14159265358979323846;
 constexpr double kAttackS = 0.004;   // sem estalo no começo da nota
 constexpr double kDecayPerS = 18.0;  // cai rápido, como um "plim"
-constexpr double kPeak = 0.55;       // folga para o amplificador pequeno não distorcer
+constexpr double kPeak = 0.8;        // forte, mas sem cortar (as duas notas se somam no meio)
 
 struct Note {
   double hz;
