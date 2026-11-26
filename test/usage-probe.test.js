@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ACTIVE_EVERY_MS, IDLE_EVERY_MS, PROBE_ARGS, createUsageProbe, findClaude, parseUsageReport } from '../src/usage-probe.js';
+import { ACTIVE_EVERY_MS, IDLE_EVERY_MS, LOGGED_OUT, PROBE_ARGS, createUsageProbe, findClaude, parseUsageReport } from '../src/usage-probe.js';
 
 const stream = (limits) => [
   JSON.stringify({ type: 'system', subtype: 'init' }),
@@ -100,6 +100,47 @@ test('createUsageProbe: o erro diz o que o /usage respondeu', async () => {
   ].join('\n');
   const probe = createUsageProbe({
     claudeBin: process.execPath, workDir, run: async () => output,
+    onReport: () => {}, onError: (_where, error) => errors.push(error.message),
+  });
+  await probe.probe();
+  assert.match(errors[0], /Failed to load usage data/);
+});
+
+test('createUsageProbe: claude deslogado diz isso; a mesma falha seguida não repete no log', async () => {
+  const workDir = join(mkdtempSync(join(tmpdir(), 'painel-sonda-')), 'sonda');
+  // O que o `claude -p /usage` sem login responde: o custo da sessão, sem os limites.
+  const costOnly = [
+    JSON.stringify({ type: 'system', subtype: 'init' }),
+    JSON.stringify({ type: 'result', subtype: 'success', result: 'Total cost:            $0.0000\nTotal duration (API):  0s' }),
+  ].join('\n');
+  const errors = [];
+  const issues = [];
+  let loggedIn = false;
+  let output = costOnly;
+  const probe = createUsageProbe({
+    claudeBin: process.execPath, workDir,
+    run: async () => output,
+    authStatus: async () => loggedIn,
+    onReport: () => {}, onError: (_where, error) => errors.push(error.message), onIssue: (text) => issues.push(text),
+  });
+  assert.equal(await probe.probe(), false);
+  assert.equal(await probe.probe(), false);
+  assert.deepEqual(errors, [LOGGED_OUT], 'uma linha só no log');
+  assert.deepEqual(issues, [LOGGED_OUT]);
+
+  loggedIn = true;
+  output = stream([WEEKLY]);
+  assert.equal(await probe.probe(), true);
+  assert.deepEqual(issues, [LOGGED_OUT, null], 'voltou: some o aviso');
+});
+
+test('createUsageProbe: logado mas sem limites continua dizendo o que o /usage respondeu', async () => {
+  const workDir = join(mkdtempSync(join(tmpdir(), 'painel-sonda-')), 'sonda');
+  const errors = [];
+  const probe = createUsageProbe({
+    claudeBin: process.execPath, workDir,
+    run: async () => JSON.stringify({ type: 'result', result: 'Failed to load usage data' }),
+    authStatus: async () => true,
     onReport: () => {}, onError: (_where, error) => errors.push(error.message),
   });
   await probe.probe();

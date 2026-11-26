@@ -119,6 +119,7 @@ const usageProbe = createUsageProbe({
   workDir: join(DATA_DIR, 'sonda-uso'),
   isActive: () => store.view().sessions.some((s) => s.status === 'working' || s.status === 'waiting'),
   onReport: (report) => usage.updateFromProbe(report),
+  onIssue: (text) => usage.setIssue(text),
   onError: logError,
 });
 /** O app do Claude grava os vínculos e o uso em arquivos próprios; relê de tempos em tempos (só o que mudou). */

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createUsage, parseRateLimits } from '../src/usage.js';
+import { SCOPED_FRESH_MS, createUsage, parseRateLimits } from '../src/usage.js';
 import { WINDOWS, paceOf } from '../public/pace.js';
 
 const HOUR = 3_600_000;
@@ -160,4 +160,34 @@ test('updateFromProbe guarda quando veio o limite por modelo; a amostra do app n
   usage.updateFromApp({ t: clock, sd: 85 });
   assert.equal(usage.view().sevenDay.usedPercentage, 85);
   assert.equal(usage.view().scopedAt, probedAt, 'o Fable continua com a hora da consulta');
+});
+
+test('view: limite por modelo velho não vai para as telas; fica desde quando e o motivo da falha', () => {
+  const file = join(mkdtempSync(join(tmpdir(), 'painel-uso-')), 'uso.json');
+  let clock = 1_795_000_000_000;
+  let changes = 0;
+  const usage = createUsage({ file, onChange: () => { changes += 1; }, now: () => clock });
+  usage.updateFromProbe({ sevenDay: { usedPercentage: 60, resetsAt: clock + 3 * DAY }, scoped: [{ label: 'Fable', usedPercentage: 12, resetsAt: clock + 3 * DAY }] });
+  const probedAt = clock;
+  clock += SCOPED_FRESH_MS;
+  assert.equal(usage.view().scoped[0].usedPercentage, 12, 'no limite ainda vale');
+  clock += 1;
+  usage.updateFromApp({ t: clock, sd: 78 });
+  const view = usage.view();
+  assert.deepEqual(view.scoped, [], 'o 12% de horas atrás não aparece como se fosse de agora');
+  assert.equal(view.scopedStale, true);
+  assert.equal(view.scopedAt, probedAt);
+  assert.equal(view.sevenDay.usedPercentage, 78, 'a semana do app continua');
+
+  const before = changes;
+  usage.setIssue('o claude do terminal está deslogado');
+  usage.setIssue('o claude do terminal está deslogado');
+  assert.equal(changes, before + 1, 'o mesmo motivo não redesenha de novo');
+  assert.equal(usage.view().probeIssue, 'o claude do terminal está deslogado');
+
+  usage.setIssue(null);
+  usage.updateFromProbe({ sevenDay: { usedPercentage: 80, resetsAt: clock + 3 * DAY }, scoped: [{ label: 'Fable', usedPercentage: 67, resetsAt: clock + 3 * DAY }] });
+  assert.equal(usage.view().probeIssue, undefined);
+  assert.equal(usage.view().scopedStale, undefined);
+  assert.equal(usage.view().scoped[0].usedPercentage, 67);
 });

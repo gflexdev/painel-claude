@@ -8,6 +8,9 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 
 const PROBE_TIMEOUT_MS = 45_000;
+const AUTH_TIMEOUT_MS = 15_000;
+/** Sem login, o `/usage` do `-p` responde só o custo da sessão ("Total cost: …"), sem os limites. */
+export const LOGGED_OUT = 'o claude do terminal está deslogado; rode `claude auth login` no Mac';
 /** Com sessão rodando, de 5 em 5 min; parado, de 30 em 30. A Anthropic limita a frequência desta consulta. */
 export const ACTIVE_EVERY_MS = 5 * 60_000;
 export const IDLE_EVERY_MS = 30 * 60_000;
@@ -98,16 +101,34 @@ function runClaude(bin, cwd) {
   });
 }
 
+/** `claude auth status` → true/false se está logado; null se não deu para saber. */
+export function readAuthStatus(bin, cwd) {
+  return new Promise((resolve) => {
+    const child = execFile(bin, ['auth', 'status'], { cwd, timeout: AUTH_TIMEOUT_MS, maxBuffer: 256 * 1024 }, (_error, stdout) => {
+      try {
+        const loggedIn = JSON.parse(String(stdout ?? '')).loggedIn;
+        resolve(typeof loggedIn === 'boolean' ? loggedIn : null);
+      } catch {
+        resolve(null);
+      }
+    });
+    child.stdin?.end();
+  });
+}
+
 /**
  * Consulta o /usage de tempos em tempos. `isActive()` diz se há sessão rodando (consulta mais vezes).
- * `run(bin, cwd)` existe para os testes.
+ * `onIssue(texto | null)` recebe o motivo da falha (ou null quando volta a funcionar), para a tela explicar
+ * por que o número parou. `run(bin, cwd)` e `authStatus(bin, cwd)` existem para os testes.
  */
 export function createUsageProbe({
-  claudeBin, workDir, isActive = () => false, onReport, onError = () => {},
-  run = runClaude, now = Date.now, setTimer = setTimeout,
+  claudeBin, workDir, isActive = () => false, onReport, onError = () => {}, onIssue = () => {},
+  run = runClaude, authStatus = readAuthStatus, now = Date.now, setTimer = setTimeout,
 }) {
   const bin = findClaude(claudeBin);
   let failures = 0;
+  /** A última falha registrada: a mesma falha seguida não enche o log (antes eram centenas de linhas iguais). */
+  let lastIssue = null;
   let lastRunAt = 0;
   let running = false;
   let timer = null;
@@ -121,15 +142,22 @@ export function createUsageProbe({
       const output = await run(bin, workDir);
       const report = parseUsageReport(output);
       if (!report) {
+        if (await authStatus(bin, workDir) === false) throw new Error(LOGGED_OUT);
         const said = usageReply(output);
         throw new Error(`resposta do /usage sem rate_limits${said ? `: ${said}` : ' (plano sem limites ou login de API)'}`);
       }
       failures = 0;
+      if (lastIssue) onIssue(null);
+      lastIssue = null;
       onReport(report);
       return true;
     } catch (error) {
       failures += 1;
-      onError('uso pelo /usage', error);
+      if (error.message !== lastIssue) {
+        onError('uso pelo /usage', error);
+        onIssue(error.message);
+      }
+      lastIssue = error.message;
       return false;
     } finally {
       running = false;

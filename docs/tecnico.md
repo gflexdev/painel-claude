@@ -262,6 +262,12 @@ Três fontes; vale o dado mais novo. Tudo fica em `~/.config/painel-claude/uso.j
    `scoped`. Custa 0 tokens. A cada 5 min com sessão rodando e 30 min parado, com espera dobrando a cada falha
    (até 1 h). O caminho do `claude` vem de `claudeBin` no `config.json`, gravado pelo instalador, ou dos lugares de
    sempre (`~/.local/bin`, Homebrew). Os hooks ficam desligados na consulta, então ela não aparece no painel.
+   Depende do **login do `claude` do terminal** (não do app desktop): deslogado, o `/usage` do `-p` responde só o
+   custo da sessão ("Total cost: …"), sem limites. Nesse caso a sonda confere `claude auth status` e o motivo vai
+   em `probeIssue` ("o claude do terminal está deslogado; rode `claude auth login` no Mac"); a mesma falha seguida
+   só entra uma vez no log. Os limites por modelo só vêm daqui: mais velhos que 2 h (`SCOPED_FRESH_MS`), o servidor
+   manda `scoped: []` e `scopedStale: true`, para o relógio e o mostrador não mostrarem um número de dias atrás
+   como se fosse de agora; o monitor diz "sem dado novo desde …" com o motivo.
 2. **Status line** (`source: "statusline"`): o Claude Code manda `rate_limits` à status line nas sessões de
    terminal, e o painel recebe em `POST /usage`. Atualiza na hora.
 3. **App do Claude** (`source: "app"`): `plan-usage-history.json`, poucas amostras por dia (veja acima).
