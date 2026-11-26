@@ -27,8 +27,9 @@ mostrador de mesa, mais de visão geral que de detalhe. Protótipo das telas no 
 - **Detalhe**: toque numa sessão. Mostra o Clawd dela, o contexto no anel, os números e o que está fazendo.
   Arrastar para baixo ou tocar no ^ volta.
 - **Esperando você**: o pedido novo abre sozinho, com a borda pulsando em vermelho e **Permitir / Negar** (ou
-  **Aprovar / Recusar** o plano). Depois de responder, vai para o próximo pedido. Pergunta com opções fica para o
-  Mac ou o celular.
+  **Aprovar / Recusar** o plano). Depois de responder, vai para o próximo pedido; se não houver outro, fica na
+  sessão respondida e, depois de 30 s sem toque, volta sozinho para a Visão geral. Vale também para o pedido
+  respondido no Mac ou no celular. Pergunta com opções fica para o Mac ou o celular.
 - **Som**: quando uma sessão passa a esperar você, toca um "plim-plim" curto (gerado na hora, sem arquivo) no
   alto-falante do kit, ligado no conector **SPK**. O volume é `PAINEL_SOM_VOLUME` em `secrets.h` (0 a 100; 0 =
   mudo). Ao ligar, quem já esperava não toca de novo. O amplificador fica ligado o tempo todo (ligado só na hora

@@ -117,7 +117,20 @@ void RoundApp::loop() {
     session_->tick();
     renderLinkScreen();
   }
+  goHomeWhenIdle(now);
   wake_.update(busy());
+}
+
+void RoundApp::goHomeWhenIdle(int64_t now) {
+  if (answeredAt_ == 0) return;
+  const int64_t lastActivity = std::max(answeredAt_, wake_.lastTouchMs());
+  if (now - lastActivity < opt_.homeAfterAnswerMs) return;
+  answeredAt_ = 0;
+  // Um pedido que você abriu enquanto isso continua na tela; o resto volta para a Visão geral.
+  if (session_->asksYou()) return;
+  session_->close();
+  lv_tileview_set_tile_by_index(tiles_, 0, 0, LV_ANIM_ON);
+  renderPager();
 }
 
 void RoundApp::handle(ClientEvent& ev) {
@@ -157,6 +170,8 @@ void RoundApp::applySnapshot(std::shared_ptr<Snapshot> snap) {
     renderLinkScreen();
   }
   session_->onSnapshot(*snapshot_);
+  // O pedido aberto foi respondido em algum lugar: daqui a pouco volta sozinho para a Visão geral.
+  if (session_->answered() && answeredAt_ == 0) answeredAt_ = platform::monoMs();
 
   // Pedido novo: toca o som, acende a tela e abre a sessão sozinho (sem atropelar outro pedido que você está lendo).
   std::set<std::string> waiting;
@@ -172,8 +187,10 @@ void RoundApp::applySnapshot(std::shared_ptr<Snapshot> snap) {
   if (!fresh.empty()) {
     wake_.poke();
     if (!firstSnapshot) platform::playChime(Chime::Waiting);  // ao ligar, quem já esperava não toca de novo
-    const bool readingRequest = session_->isOpen() && waitingIds_.count(session_->openId());
-    if (!readingRequest) openSession(fresh);
+    if (!session_->asksYou()) {
+      answeredAt_ = 0;
+      openSession(fresh);
+    }
   }
   refresh();
 }
@@ -198,13 +215,15 @@ void RoundApp::openSession(const std::string& id) {
 void RoundApp::openNextWaiting(const std::string& except) {
   if (snapshot_) {
     for (const Session& s : snapshot_->sessions) {
-      if (s.status == "waiting" && !s.archived && s.id != except && s.permission.kind != "question") {
+      if (s.hasPermission && !s.archived && s.id != except && s.permission.kind != "question") {
+        answeredAt_ = 0;
         session_->open(s);
         return;
       }
     }
   }
-  session_->close();
+  // Sem outro pedido: fica na sessão respondida (o Clawd volta a trabalhar) e depois vai para a Visão geral.
+  if (answeredAt_ == 0) answeredAt_ = platform::monoMs();
 }
 
 void RoundApp::renderPager() {

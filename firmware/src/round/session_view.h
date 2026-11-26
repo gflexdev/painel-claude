@@ -24,9 +24,13 @@ class SessionView {
   void open(const Session& session);
   void close();
   bool isOpen() const { return !openId_.empty(); }
+  /** O pedido desta sessão foi respondido (aqui, no Mac ou no celular) e não chegou outro. */
+  bool answered() const { return isOpen() && answered_; }
+  /** Há um pedido aberto na tela esperando a sua resposta. */
+  bool asksYou() const { return isOpen() && session_.hasPermission && !answered_; }
   const std::string& openId() const { return openId_; }
 
-  /** Depois de uma decisão aceita (e do aviso na tela), a app escolhe o próximo pedido ou fecha. */
+  /** Depois de uma decisão aceita (e do aviso na tela), a app escolhe o próximo pedido ou fica nesta sessão. */
   void onDecided(std::function<void(const std::string& decidedId)> next) { onDecided_ = std::move(next); }
 
   void onSnapshot(const Snapshot& snapshot);
@@ -59,6 +63,10 @@ class SessionView {
   int waitingIndex_ = 0;
   int waitingTotal_ = 0;
   bool busy_ = false;
+  /** Pedido já respondido: some da tela mesmo antes de o servidor mandar o detalhe novo. */
+  std::string answeredId_;
+  /** Respondido: o servidor ainda diz "esperando" até o próximo hook, mas a tela já mostra a sessão rodando. */
+  bool answered_ = false;
   bool edgeOn_ = false;
   int64_t toastUntil_ = 0;
   bool toastThenNext_ = false;
