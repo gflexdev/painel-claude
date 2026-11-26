@@ -2,6 +2,8 @@
 
 #include <ArduinoJson.h>
 
+#include <algorithm>
+
 namespace painel {
 namespace {
 
@@ -35,6 +37,7 @@ Session readSession(JsonObjectConst o) {
   s.unseen = o["unseen"] | false;
   s.stale = o["stale"] | false;
   s.archived = o["archived"] | false;
+  s.watched = o["watched"].is<bool>() && o["watched"].as<bool>();
   s.since = num(o["since"], 0);
   s.lastEventAt = num(o["lastEventAt"], 0);
   s.contextTokens = num(o["contextTokens"], -1);
@@ -144,6 +147,22 @@ bool parseDetail(const char* json, size_t len, Detail& out, std::string& error) 
   }
   out = std::move(d);
   return true;
+}
+
+bool parseWatchResult(const char* json, size_t len, bool& watched) {
+  JsonDocument doc;
+  if (deserializeJson(doc, json, len) || !(doc["success"] | false)) return false;
+  JsonVariantConst w = doc["data"]["watched"];
+  if (!w.is<bool>()) return false;
+  watched = w.as<bool>();
+  return true;
+}
+
+bool validId(const std::string& id) {
+  if (id.empty() || id.size() > 80) return false;
+  return std::all_of(id.begin(), id.end(), [](char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-';
+  });
 }
 
 std::string parseError(const char* json, size_t len) {

@@ -21,13 +21,6 @@ constexpr size_t kStackBytes = 16 * 1024;
 
 }  // namespace
 
-bool validId(const std::string& id) {
-  if (id.empty() || id.size() > 80) return false;
-  return std::all_of(id.begin(), id.end(), [](char c) {
-    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-';
-  });
-}
-
 void Client::start() {
   platform::prepareThread("painel-sse", kStackBytes);
   std::thread([this] { streamLoop(); }).detach();
@@ -179,6 +172,10 @@ void Client::postSeen(const std::string& sessionId) {
   if (validId(sessionId)) enqueue({Command::Kind::Seen, sessionId, "{}", false});
 }
 
+void Client::postWatch(const std::string& sessionId, bool watch) {
+  if (validId(sessionId)) enqueue({Command::Kind::Watch, sessionId, "{}", watch});
+}
+
 void Client::apiLoop() {
   for (;;) {
     Command cmd;
@@ -216,6 +213,19 @@ void Client::runCommand(const Command& cmd) {
       if (ev.message.empty()) ev.message = "HTTP " + std::to_string(res.status);
     }
     platform::log("[api] decisão %s → %d", cmd.allow ? "allow" : "deny", res.status);
+  } else if (cmd.kind == Command::Kind::Watch) {
+    ev.type = ClientEvent::Type::Watch;
+    const std::string action = cmd.allow ? "/watch" : "/unwatch";
+    const http::Response res = http::request(endpoint_, "POST", "/api/sessions/" + cmd.id + action, cmd.body);
+    ev.status = res.status;
+    if (res.status == 200 && !parseWatchResult(res.body.data(), res.body.size(), ev.watched)) {
+      ev.status = 0;
+      ev.message = "resposta estranha do Mac";
+    } else if (res.status != 200) {
+      ev.message = res.status ? parseError(res.body.data(), res.body.size()) : res.error;
+      if (ev.message.empty()) ev.message = "HTTP " + std::to_string(res.status);
+    }
+    platform::log("[api] %s %s → %d", cmd.allow ? "vigiar" : "parar de vigiar", cmd.id.substr(0, 8).c_str(), res.status);
   } else {
     ev.type = ClientEvent::Type::Seen;
     const http::Response res = http::request(endpoint_, "POST", "/api/sessions/" + cmd.id + "/seen", cmd.body);

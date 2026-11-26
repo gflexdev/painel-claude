@@ -1,5 +1,5 @@
 // Cliente do servidor painel-claude: uma thread segura o SSE (/api/stream) e reconecta com backoff;
-// outra faz as chamadas avulsas (detalhe, decisão, "vista"). A interface lê tudo por poll(), sem travar.
+// outra faz as chamadas avulsas (detalhe, decisão, "vista", vigiar). A interface lê tudo por poll(), sem travar.
 #pragma once
 
 #include <atomic>
@@ -18,14 +18,15 @@ namespace painel {
 enum class Link { Connecting, Online, Offline, Unauthorized };
 
 struct ClientEvent {
-  enum class Type { Snapshot, Link, Detail, Decision, Seen } type = Type::Link;
+  enum class Type { Snapshot, Link, Detail, Decision, Seen, Watch } type = Type::Link;
   std::shared_ptr<Snapshot> snapshot;
   std::shared_ptr<Detail> detail;
   Link link = Link::Connecting;
   int status = 0;        // HTTP (0 = falha de rede)
-  std::string id;        // sessão (Detail/Seen) ou pedido (Decision)
+  std::string id;        // sessão (Detail/Seen/Watch) ou pedido (Decision)
   std::string message;   // erro legível
   bool allow = false;    // Decision
+  bool watched = false;  // Watch com status 200: como a sessão ficou no painel
   int64_t retryAt = 0;   // Link Offline: quando tenta de novo (monoMs)
 };
 
@@ -45,15 +46,17 @@ class Client {
   void requestDetail(const std::string& sessionId);
   void postDecision(const std::string& requestId, bool allow, std::string body);
   void postSeen(const std::string& sessionId);
+  /** Liga (`watch = true`) ou desliga a vigia da sessão: POST /api/sessions/:id/watch ou /unwatch. */
+  void postWatch(const std::string& sessionId, bool watch);
 
   const http::Endpoint& endpoint() const { return endpoint_; }
 
  private:
   struct Command {
-    enum class Kind { Detail, Decision, Seen } kind;
+    enum class Kind { Detail, Decision, Seen, Watch } kind;
     std::string id;
     std::string body;
-    bool allow = false;
+    bool allow = false;  // Decision: permitir; Watch: ligar a vigia
   };
 
   void streamLoop();
@@ -74,8 +77,5 @@ class Client {
   std::condition_variable commandsReady_;
   std::deque<Command> commands_;
 };
-
-/** IDs aceitos pelo servidor: [A-Za-z0-9_-]{1,80}. Evita montar caminho com lixo. */
-bool validId(const std::string& id);
 
 }  // namespace painel

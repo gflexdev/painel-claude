@@ -11,6 +11,7 @@
 
 #include "app/client.h"
 #include "app/model.h"
+#include "app/watch.h"
 #include "app/wake.h"
 #include "round/pages.h"
 #include "round/session_view.h"
@@ -38,6 +39,7 @@ class RoundApp {
  private:
   void handle(ClientEvent& ev);
   void applySnapshot(std::shared_ptr<Snapshot> snap);
+  void onWatch(const ClientEvent& ev);
   void refresh();
   void renderLinkScreen();
   void renderPager();
@@ -51,6 +53,8 @@ class RoundApp {
   Client& client_;
   RoundOptions opt_;
   Wake wake_;
+  /** Vigiar pelo detalhe: o pedido a caminho e o estado que o painel confirmou. */
+  WatchToggle watch_;
   OverviewPage overview_;
   ListPage list_;
   UsagePage usage_;
