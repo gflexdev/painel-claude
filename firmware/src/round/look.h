@@ -52,6 +52,10 @@ lv_obj_t* centeredLabel(lv_obj_t* parent, const lv_font_t* font, uint32_t color,
                         const std::string& text = "");
 /** Pílula: caixa arredondada com fundo, conteúdo em linha. */
 lv_obj_t* pill(lv_obj_t* parent, uint32_t bg);
+/** Marca de vigiada (◉, como no relógio): anel e ponto na cor de pergunta; `r` é o raio, `bg` o fundo do meio. */
+lv_obj_t* watchMark(lv_obj_t* parent, int r, uint32_t bg);
+/** Troca o fundo do meio da marca (a linha muda de cor quando a sessão espera você). */
+void setWatchMarkBg(lv_obj_t* mark, uint32_t bg);
 /** Troca o texto só se mudou (o LVGL redesenha a cada set, mesmo com o mesmo texto). */
 void setText(lv_obj_t* label, const std::string& text);
 void show(lv_obj_t* obj, bool visible);

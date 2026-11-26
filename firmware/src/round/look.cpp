@@ -1,5 +1,7 @@
 #include "round/look.h"
 
+#include <algorithm>
+
 #include "app/format.h"
 
 namespace painel::round {
@@ -123,6 +125,29 @@ lv_obj_t* pill(lv_obj_t* parent, uint32_t bg) {
   lv_obj_set_style_pad_column(p, 8, 0);
   return p;
 }
+
+lv_obj_t* watchMark(lv_obj_t* parent, int r, uint32_t bg) {
+  const int ring = std::max(1, r / 3);
+  lv_obj_t* m = ui::box(parent);
+  lv_obj_remove_flag(m, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_size(m, r * 2, r * 2);
+  lv_obj_set_style_radius(m, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_bg_opa(m, LV_OPA_COVER, 0);
+  lv_obj_set_style_bg_color(m, ui::hex(bg), 0);
+  lv_obj_set_style_border_width(m, ring, 0);
+  lv_obj_set_style_border_color(m, ui::hex(ui::color::kQuestion), 0);
+  lv_obj_t* dot = ui::box(m);
+  lv_obj_remove_flag(dot, LV_OBJ_FLAG_CLICKABLE);
+  const int d = std::max(2, (r - ring * 2) * 2);
+  lv_obj_set_size(dot, d, d);
+  lv_obj_set_style_radius(dot, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
+  lv_obj_set_style_bg_color(dot, ui::hex(ui::color::kQuestion), 0);
+  lv_obj_center(dot);
+  return m;
+}
+
+void setWatchMarkBg(lv_obj_t* mark, uint32_t bg) { lv_obj_set_style_bg_color(mark, ui::hex(bg), 0); }
 
 void setText(lv_obj_t* label, const std::string& text) {
   const char* current = lv_label_get_text(label);

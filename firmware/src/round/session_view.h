@@ -1,6 +1,7 @@
 // Detalhe de uma sessão no mostrador redondo, por cima do carrossel: o Clawd dela, a situação, o contexto
 // no anel e o que está fazendo agora. Se ela espera você, mostra o pedido e Permitir / Negar (ou Aprovar /
-// Recusar o plano); pergunta com opções fica para o Mac ou o celular.
+// Recusar o plano); pergunta com opções fica para o Mac ou o celular. Embaixo, Vigiar / Parar de vigiar, longe
+// de Permitir / Negar.
 #pragma once
 
 #include <lvgl.h>
@@ -11,14 +12,15 @@
 
 #include "app/client.h"
 #include "app/model.h"
+#include "app/watch.h"
 #include "ui/clawd_view.h"
 
 namespace painel::round {
 
 class SessionView {
  public:
-  SessionView(Client& client, std::function<int64_t()> serverNow)
-      : client_(client), serverNow_(std::move(serverNow)) {}
+  SessionView(Client& client, WatchToggle& watch, std::function<int64_t()> serverNow)
+      : client_(client), watch_(watch), serverNow_(std::move(serverNow)) {}
 
   void create(lv_obj_t* screen);
   void open(const Session& session);
@@ -36,6 +38,8 @@ class SessionView {
   void onSnapshot(const Snapshot& snapshot);
   void onDetail(const ClientEvent& ev);
   void onDecision(const ClientEvent& ev);
+  /** Resposta do vigiar / parar de vigiar (o estado novo já chegou por onSnapshot). */
+  void onWatch(const ClientEvent& ev);
   /** Chame no laço: cuida do tempo do aviso. */
   void loop();
   /** Chame a cada segundo: atualiza os tempos. */
@@ -44,6 +48,8 @@ class SessionView {
  private:
   void render();
   void decide(bool allow);
+  void toggleWatch();
+  void renderWatch(const Session& s);
   void showToast(const std::string& text, uint32_t bg, uint32_t ink, bool thenNext);
   void setEdge(bool on);
   const Request* request() const;
@@ -52,8 +58,10 @@ class SessionView {
   static void onGesture(lv_event_t* e);
   static void onAllow(lv_event_t* e);
   static void onDeny(lv_event_t* e);
+  static void onWatchTap(lv_event_t* e);
 
   Client& client_;
+  WatchToggle& watch_;
   std::function<int64_t()> serverNow_;
   std::function<void(const std::string&)> onDecided_;
 
@@ -96,7 +104,10 @@ class SessionView {
   lv_obj_t* allow_ = nullptr;
   lv_obj_t* allowText_ = nullptr;
   lv_obj_t* onlyMac_ = nullptr;
-  lv_obj_t* queue_ = nullptr;
+
+  lv_obj_t* watchBtn_ = nullptr;
+  lv_obj_t* watchMark_ = nullptr;
+  lv_obj_t* watchText_ = nullptr;
 
   lv_obj_t* toast_ = nullptr;
   lv_obj_t* toastText_ = nullptr;

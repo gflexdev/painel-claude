@@ -160,6 +160,8 @@ void App::handle(ClientEvent& ev) {
     case ClientEvent::Type::Seen:
       if (ev.status != 200) platform::log("[api] seen falhou: %d %s", ev.status, ev.message.c_str());
       break;
+    case ClientEvent::Type::Watch:  // a tela quadrada não vigia
+      break;
   }
 }
 

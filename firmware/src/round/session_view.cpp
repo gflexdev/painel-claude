@@ -15,6 +15,11 @@ constexpr int64_t kToastMs = 1300;
 constexpr int64_t kContextWindow = 200000;
 constexpr int64_t kLongContextWindow = 1000000;  // modelos [1m]
 constexpr int kClawdUnit = 5;
+/** Vigiar: embaixo de tudo, a 12 px de Permitir / Negar (336–392), sem cobrir o cartão nem os botões. */
+constexpr int kWatchY = 404;
+constexpr int kWatchW = 196;
+constexpr int kWatchH = 44;
+constexpr uint32_t kWatchLine = 0x3a3e48;
 
 lv_obj_t* passive(lv_obj_t* parent) {
   lv_obj_t* b = box(parent);
@@ -118,7 +123,7 @@ void SessionView::create(lv_obj_t* screen) {
   lv_obj_set_style_text_letter_space(nowTitle, 2, 0);
   lv_label_set_text(nowTitle, "AGORA");
   now_ = wrapLabel(calm_, &font_mono_14, 0xd6d4ce, kCenter - 150, 320, 300, 2);
-  footer_ = wrapLabel(calm_, &font_mono_12, color::kInkDim, kCenter - 150, 392, 300, 1);
+  footer_ = wrapLabel(calm_, &font_mono_12, color::kInkDim, kCenter - 150, 370, 300, 1);
 
   // Sessão esperando você: o pedido e os botões.
   asks_ = passive(root_);
@@ -153,7 +158,22 @@ void SessionView::create(lv_obj_t* screen) {
   lv_obj_add_event_cb(allow_, onAllow, LV_EVENT_CLICKED, this);
   onlyMac_ = wrapLabel(asks_, &font_disp_15, tone::kInkSoft, kCenter - 140, 342, 280, 2);
   lv_obj_set_style_text_align(onlyMac_, LV_TEXT_ALIGN_CENTER, 0);
-  queue_ = wrapLabel(asks_, &font_mono_12, color::kInkDim, kCenter - 140, 404, 280, 1);
+
+  // Vigiar / Parar de vigiar: o mesmo lugar com ou sem pedido, com o mesmo toque dos outros botões.
+  watchBtn_ = box(root_);
+  lv_obj_set_size(watchBtn_, kWatchW, kWatchH);
+  lv_obj_set_pos(watchBtn_, kCenter - kWatchW / 2, kWatchY);
+  lv_obj_set_style_radius(watchBtn_, kWatchH / 2, 0);
+  lv_obj_set_style_bg_opa(watchBtn_, LV_OPA_COVER, 0);
+  lv_obj_set_style_border_width(watchBtn_, 2, 0);
+  lv_obj_set_style_transform_scale(watchBtn_, 245, LV_STATE_PRESSED);
+  lv_obj_set_style_opa(watchBtn_, LV_OPA_50, LV_STATE_DISABLED);
+  lv_obj_set_flex_flow(watchBtn_, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(watchBtn_, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_style_pad_column(watchBtn_, 8, 0);
+  lv_obj_add_event_cb(watchBtn_, onWatchTap, LV_EVENT_CLICKED, this);
+  watchMark_ = watchMark(watchBtn_, 7, tone::kBlack);
+  watchText_ = label(watchBtn_, &font_disp_15, color::kInk);
 
   toast_ = pill(root_, color::kIdle);
   lv_obj_remove_flag(toast_, LV_OBJ_FLAG_CLICKABLE);
@@ -247,6 +267,35 @@ void SessionView::decide(bool allow) {
   render();
 }
 
+void SessionView::toggleWatch() {
+  if (!isOpen() || !watch_.start(openId_)) return;
+  client_.postWatch(openId_, !session_.watched);
+  render();
+}
+
+void SessionView::onWatch(const ClientEvent& ev) {
+  if (ev.id != openId_) return;
+  if (ev.status == 200) {
+    showToast(ev.watched ? "Vigiando" : "Parou de vigiar", ev.watched ? color::kQuestion : 0x2a2e38,
+              ev.watched ? color::kAllowInk : color::kInk, false);
+  } else {
+    showToast(ev.message.empty() ? "Não deu para vigiar" : ev.message, color::kWaiting, 0x1a0508, false);
+  }
+  render();
+}
+
+void SessionView::renderWatch(const Session& s) {
+  const bool on = s.watched;
+  lv_obj_set_style_bg_color(watchBtn_, hex(on ? tintColor(color::kQuestion) : tone::kBlack), 0);
+  lv_obj_set_style_border_color(watchBtn_, hex(on ? color::kQuestion : kWatchLine), 0);
+  setWatchMarkBg(watchMark_, on ? tintColor(color::kQuestion) : tone::kBlack);
+  show(watchMark_, on);
+  setText(watchText_, watch_.label(s));
+  lv_obj_set_style_text_color(watchText_, hex(on ? softColor(color::kQuestion) : color::kInk), 0);
+  if (watch_.pendingFor(s.id)) lv_obj_add_state(watchBtn_, LV_STATE_DISABLED);
+  else lv_obj_remove_state(watchBtn_, LV_STATE_DISABLED);
+}
+
 void SessionView::onDecision(const ClientEvent& ev) {
   busy_ = false;
   const Request* answered = request();
@@ -272,8 +321,9 @@ void SessionView::showToast(const std::string& text, uint32_t bg, uint32_t ink, 
   lv_obj_set_style_text_color(toastText_, hex(ink), 0);
   show(toast_, true);
   lv_obj_move_foreground(toast_);
+  // Um aviso por cima de outro que ia levar ao próximo pedido não cancela a ida.
+  toastThenNext_ = thenNext || (toastUntil_ != 0 && toastThenNext_);
   toastUntil_ = platform::monoMs() + kToastMs;
-  toastThenNext_ = thenNext;
 }
 
 void SessionView::loop() {
@@ -324,8 +374,13 @@ void SessionView::render() {
   lv_obj_set_style_bg_color(chip_, hex(tintColor(c)), 0);
   lv_obj_set_style_bg_color(chipDot_, hex(c), 0);
   lv_obj_set_style_text_color(chipText_, hex(softColor(c)), 0);
-  setText(chipText_, tileWordUpper(s) + " · " + upper(elapsed(s.since, now)));
+  // Vários esperando você: o chip diz qual deles é este (o lugar de baixo é do Vigiar).
+  const bool queued = waiting && waitingTotal_ > 1 && waitingIndex_ > 0;
+  setText(chipText_, tileWordUpper(s) + " · " +
+                         (queued ? std::to_string(waitingIndex_) + " DE " + std::to_string(waitingTotal_)
+                                 : upper(elapsed(s.since, now))));
   setText(name_, s.name.empty() ? s.id.substr(0, 8) : oneLine(s.name));
+  renderWatch(s);
   setText(sub_, s.model.empty() ? s.project : s.project + " · " + s.model);
 
   // Anel: quanto do contexto já foi usado (escondido enquanto o vermelho pulsa na borda).
@@ -376,9 +431,6 @@ void SessionView::render() {
     if (busy_) lv_obj_add_state(b, LV_STATE_DISABLED);
     else lv_obj_remove_state(b, LV_STATE_DISABLED);
   }
-  setText(queue_, waitingTotal_ > 1 && waitingIndex_ > 0
-                      ? std::to_string(waitingIndex_) + " de " + std::to_string(waitingTotal_) + " esperando você"
-                      : "deslize para baixo para voltar");
 }
 
 void SessionView::onBack(lv_event_t* e) { static_cast<SessionView*>(lv_event_get_user_data(e))->close(); }
@@ -391,5 +443,6 @@ void SessionView::onGesture(lv_event_t* e) {
 
 void SessionView::onAllow(lv_event_t* e) { static_cast<SessionView*>(lv_event_get_user_data(e))->decide(true); }
 void SessionView::onDeny(lv_event_t* e) { static_cast<SessionView*>(lv_event_get_user_data(e))->decide(false); }
+void SessionView::onWatchTap(lv_event_t* e) { static_cast<SessionView*>(lv_event_get_user_data(e))->toggleWatch(); }
 
 }  // namespace painel::round

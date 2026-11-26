@@ -26,6 +26,13 @@ mostrador de mesa, mais de visão geral que de detalhe. Protótipo das telas no 
   - **Uso do plano**: janela de 5 h por fora e semana por dentro, com o tracinho do ritmo e quando zera.
 - **Detalhe**: toque numa sessão. Mostra o Clawd dela, o contexto no anel, os números e o que está fazendo.
   Arrastar para baixo ou tocar no ^ volta.
+- **Vigiar**: no pé do detalhe, **Vigiar / Parar de vigiar** liga ou desliga a Vigia da sessão
+  (`POST /api/sessions/:id/watch` e `/unwatch`, com o mesmo token). A vigia é uma só: ligar aqui aparece no painel
+  web e no relógio, e o contrário também. Enquanto o pedido vai, o botão fica apagado ("vigiando…"); a resposta do
+  Mac vira um aviso curto ("Vigiando", "Parou de vigiar" ou o erro). A sessão vigiada leva o **◉** (anel e ponto
+  na cor de pergunta, como no relógio) no botão, na linha da lista e no círculo dela na órbita. Na sessão que
+  espera você, o botão fica abaixo de Permitir / Negar, sem cobrir nada; com vários pedidos, o chip do topo diz
+  qual é este ("1 DE 3"). O mostrador não recebe Avisos: eles vão ao celular e ao relógio pelo Web Push.
 - **Esperando você**: o pedido novo abre sozinho, com a borda pulsando em vermelho e **Permitir / Negar** (ou
   **Aprovar / Recusar** o plano). Depois de responder, vai para o próximo pedido; se não houver outro, fica na
   sessão respondida e, depois de 30 s sem toque, volta sozinho para a Visão geral. Vale também para o pedido
@@ -177,6 +184,14 @@ Depois encerre a sessão de teste:
 curl -s -X POST http://127.0.0.1:7777/hook -H 'Content-Type: application/json' -d '{"hook_event_name":"SessionEnd","session_id":"teste-bancada"}'
 ```
 
+## Testes
+
+A lógica pura (modelo e vigia) tem testes com Unity que rodam no Mac, sem placa nem LVGL:
+
+```bash
+pio test -e test
+```
+
 ## Como o código está dividido
 
 ```
@@ -189,6 +204,7 @@ src/app/     comum à placa e ao simulador, sem LVGL
   wake       brilho e toque (a tela escura só acende no primeiro toque), comum às duas placas
   link_screen  texto da tela de estado (Wi-Fi, Mac sem resposta, token recusado)
   format     textos ("terminou · ver", "3 min", "84k")
+  watch      botão de vigiar sem LVGL: um pedido por vez, o estado confirmado e o rótulo
   app        liga cliente e telas, barra do topo, telas de estado e brilho
 src/ui/      LVGL: tema (cores da web), grade, detalhe, robô e Clawd num canvas
 src/round/   mostrador redondo: carrossel (visão geral, sessões, uso), detalhe e tela de estado

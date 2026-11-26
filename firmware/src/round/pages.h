@@ -33,6 +33,7 @@ class OverviewPage {
   struct Orb {
     lv_obj_t* obj = nullptr;
     lv_obj_t* badge = nullptr;
+    lv_obj_t* mark = nullptr;  // vigiada
     lv_obj_t* line = nullptr;
     lv_point_precise_t points[2] = {};
     ui::ClawdView clawd;
@@ -69,6 +70,7 @@ class ListPage {
     lv_obj_t* name = nullptr;
     lv_obj_t* word = nullptr;
     lv_obj_t* time = nullptr;
+    lv_obj_t* mark = nullptr;  // vigiada
     ui::ClawdView clawd;
     bool pulsing = false;
   };

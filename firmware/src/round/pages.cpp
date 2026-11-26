@@ -15,6 +15,8 @@ constexpr double kPi = 3.14159265358979323846;
 constexpr int kOrbit = 129;        // raio da órbita dos Clawds
 constexpr int kOrbitDots = 40;     // a órbita é tracejada, como no Mapa da web
 constexpr int kOrb = 48;           // círculo de cada sessão (o contorno de 2 px fica por fora)
+constexpr int kOrbMark = 8;        // raio da marca de vigiada no círculo da sessão
+constexpr int kRowMark = 7;        // e na linha da lista
 constexpr int kCore = 124;         // núcleo com o Clawd grande
 constexpr int kLineFrom = kCore / 2 + 2;
 constexpr int kLineTo = kOrbit - kOrb / 2 - 4;
@@ -138,6 +140,12 @@ void OverviewPage::create(lv_obj_t* tile, OpenSession open) {
     lv_obj_add_flag(orb.badge, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(orb.obj, LV_OBJ_FLAG_HIDDEN);
   }
+  // Vigiada: o ◉ embaixo à direita, do lado oposto ao "!" de quem espera você. Fica na página, por cima do
+  // círculo, porque fora da caixa dele o LVGL não redesenha.
+  for (Orb& orb : orbs_) {
+    orb.mark = watchMark(tile, kOrbMark, tone::kBlack);
+    lv_obj_add_flag(orb.mark, LV_OBJ_FLAG_HIDDEN);
+  }
 
   core_ = box(tile);
   lv_obj_set_size(core_, kCore, kCore);
@@ -199,6 +207,7 @@ void OverviewPage::update(const Frame& f) {
     if (i >= n) {
       show(orb.obj, false);
       show(orb.line, false);
+      show(orb.mark, false);
       if (orb.pulsing) pulseOutline(orb.obj, color::kWaiting, false);
       orb.pulsing = false;
       orb.id.clear();
@@ -221,6 +230,8 @@ void OverviewPage::update(const Frame& f) {
     lv_obj_set_style_line_opa(orb.line, waiting ? 190 : 115, 0);
     orb.clawd.setLook(clawdLookOf(s, false));
     show(orb.badge, waiting);
+    lv_obj_set_pos(orb.mark, cx + kOrb / 2 - kOrbMark - 2, cy + kOrb / 2 - kOrbMark - 2);
+    show(orb.mark, s.watched);
     if (waiting != orb.pulsing || c != orb.color) pulseOutline(orb.obj, color::kWaiting, waiting);
     orb.pulsing = waiting;
     orb.color = c;
@@ -320,6 +331,8 @@ void ListPage::create(lv_obj_t* tile, OpenSession open) {
       lv_obj_set_width(l, lv_pct(100));
       lv_label_set_long_mode(l, LV_LABEL_LONG_MODE_DOTS);
     }
+    r.mark = watchMark(r.obj, kRowMark, tone::kRow);
+    lv_obj_add_flag(r.mark, LV_OBJ_FLAG_HIDDEN);
     r.time = label(r.obj, &font_mono_12, color::kInkDim);
     lv_obj_add_flag(r.obj, LV_OBJ_FLAG_HIDDEN);
   }
@@ -357,7 +370,10 @@ void ListPage::update(const Frame& f) {
     const uint32_t c = statusColor(s);
     const bool moves = inMotion(s);
     const bool waiting = s.status == "waiting";
-    lv_obj_set_style_bg_color(r.obj, hex(waiting ? tintColor(c) : tone::kRow), 0);
+    const uint32_t rowBg = waiting ? tintColor(c) : tone::kRow;
+    lv_obj_set_style_bg_color(r.obj, hex(rowBg), 0);
+    setWatchMarkBg(r.mark, rowBg);
+    show(r.mark, s.watched);
     lv_obj_set_style_border_color(r.obj, hex(c), 0);
     if (waiting != r.pulsing) pulseOutline(r.obj, color::kWaiting, waiting);
     r.pulsing = waiting;

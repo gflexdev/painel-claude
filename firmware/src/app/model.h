@@ -27,6 +27,8 @@ struct Session {
   bool unseen = false;
   bool stale = false;
   bool archived = false;
+  /** Vigiada (#4): ligar aqui, no painel web ou no relógio vale para todos. Ausente = não vigiada. */
+  bool watched = false;
   int64_t since = 0;
   int64_t lastEventAt = 0;
   int64_t contextTokens = -1;  // -1 = sem dado
@@ -109,6 +111,11 @@ using Picks = std::map<std::string, Pick>;
 bool parseSnapshot(const char* json, size_t len, Snapshot& out, std::string& error);
 /** Detalhe de GET /api/sessions/:id (envelope { success, data }). */
 bool parseDetail(const char* json, size_t len, Detail& out, std::string& error);
+/** Resposta de POST /api/sessions/:id/watch ou /unwatch ({ success, data: { id, watched } }): como a sessão ficou.
+ *  false se a resposta não traz o campo. */
+bool parseWatchResult(const char* json, size_t len, bool& watched);
+/** IDs aceitos pelo servidor: [A-Za-z0-9_-]{1,80}. Evita montar caminho com lixo. */
+bool validId(const std::string& id);
 /** Mensagem de erro de uma resposta { success: false, error } (vazio se não houver). */
 std::string parseError(const char* json, size_t len);
 /** Corpo de POST /api/permissions/:id. `answers` só vai em pergunta aprovada. */

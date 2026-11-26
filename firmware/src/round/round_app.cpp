@@ -63,7 +63,7 @@ void RoundApp::build(lv_obj_t* screen) {
     lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
   }
 
-  session_ = std::make_unique<SessionView>(client_, [this] { return serverNow(); });
+  session_ = std::make_unique<SessionView>(client_, watch_, [this] { return serverNow(); });
   session_->create(screen);
   session_->onDecided([this](const std::string& decided) { openNextWaiting(decided); });
 
@@ -157,13 +157,30 @@ void RoundApp::handle(ClientEvent& ev) {
     case ClientEvent::Type::Seen:
       if (ev.status != 200) platform::log("[api] seen falhou: %d %s", ev.status, ev.message.c_str());
       break;
+    case ClientEvent::Type::Watch:
+      onWatch(ev);
+      break;
   }
+}
+
+void RoundApp::onWatch(const ClientEvent& ev) {
+  const int64_t now = platform::monoMs();
+  if (ev.status == 200) watch_.confirm(ev.id, ev.watched, now);
+  else watch_.fail(ev.id);
+  // A lista que está na tela pode ter saído antes da vigia mudar: vale o que o painel acabou de responder.
+  if (snapshot_) {
+    watch_.applyTo(snapshot_->sessions, now);
+    session_->onSnapshot(*snapshot_);
+    refresh();
+  }
+  session_->onWatch(ev);
 }
 
 void RoundApp::applySnapshot(std::shared_ptr<Snapshot> snap) {
   if (!snap) return;
   snapshot_ = std::move(snap);
   snapshotMono_ = platform::monoMs();
+  watch_.applyTo(snapshot_->sessions, snapshotMono_);
   if (link_ != Link::Online) {
     link_ = Link::Online;
     offlineSince_ = 0;
