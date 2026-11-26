@@ -230,6 +230,9 @@ O Tailscale cria uma rede privada entre os seus aparelhos. O painel continua vis
 - **Estilo do personagem:** o botão com o bonequinho, ao lado do relógio.
 - **Ajustes:** o botão ⚙. No celular as chaves só mostram como estão, com o aviso "Para mudar, abra o painel no
   Mac".
+- **Vigiar:** no detalhe da sessão. Uma sessão vigiada manda um Aviso a cada aparelho com os Avisos ligados quando
+  termina, dá erro, fica esperando você ou acaba o turno deixando só comandos em segundo plano. Tocar no Aviso abre
+  o painel no detalhe dela, e um Aviso novo da mesma sessão substitui o anterior. Terminou e erro encerram a vigia.
 - **Avisos neste aparelho:** nos Ajustes, em "Neste aparelho". Toque em **Ligar** e permita as notificações: o
   Aviso chega mesmo com o app do painel fechado, e o relógio Garmin repete. **Mandar Aviso de teste** confere o
   caminho todo. A linha diz se o aparelho está recebendo, bloqueado (libere nas informações do site) ou sem

@@ -105,9 +105,11 @@ aplicada: evento de hook local ou remoto, adoção pelo `claude agents`, encerra
 
 O Aviso leva só `{ id, situation: 'done' | 'error' | 'waiting' | 'background', name, project, machine? }`. O nome
 é o título do Claude ou o do `claude agents`, nunca o primeiro pedido (sem nenhum dos dois, vai "sessão" e o
-começo do id). Nunca leva o detalhe do tile, o comando, o pedido nem trecho da resposta. Por enquanto cada Aviso só
-vai ao log do painel (`Aviso: done · nome · projeto · máquina`); o envio é a função `send` da Vigia, e falha nela
-não atrasa nem derruba a ingestão dos eventos.
+começo do id). Nunca leva o detalhe do tile, o comando, o pedido nem trecho da resposta. Cada Aviso vai ao log do
+painel (`Aviso: done · nome · projeto · máquina`) e, por Web Push, a todos os aparelhos inscritos (veja
+[Avisos (Web Push)](#avisos-web-push)): o `send` da Vigia, ligado em `src/server.js`, passa o Aviso por
+`pushAviso` (`src/push.js`) e chama `push.notify`, que não espera o envio. Falha no envio não atrasa nem derruba a
+ingestão dos eventos.
 
 ## Sessões já abertas (`claude agents --json`)
 
@@ -348,8 +350,11 @@ o Garmin Connect o repete no relógio (ADR 0001). Tudo com `node:crypto`, sem de
   nunca o conteúdo do Aviso nem o endpoint (que é um segredo do aparelho). `push.notify(aviso)` manda sem esperar,
   para a ingestão de eventos não parar; `push.send(aviso)` devolve `{ sent, removed, failed, devices }`.
 - **Payload** (JSON, até ~3,9 kB): `{ status, name?, project?, machine?, sessionId? }`, com `status` = `done` |
-  `error` | `waiting` | `background` | `test`. Nunca o comando, o pedido, o detalhe do tile nem trecho de resposta,
-  porque aparece na tela bloqueada e no relógio.
+  `error` | `waiting` | `background` | `test`. O Aviso da Vigia vira payload em `pushAviso`, campo a campo
+  (`situation` → `status`, `id` → `sessionId`), para nada além disso ir ao aparelho. Nunca o comando, o pedido, o
+  detalhe do tile nem trecho de resposta, porque aparece na tela bloqueada e no relógio. O teste
+  `test/avisos.test.js` passa eventos de hook pelo store, pela Vigia e pelo envio até dois aparelhos falsos, que
+  abrem o que chegou com a própria chave, e confere esse conteúdo.
 - **Service worker** (`public/sw.js`): no `push`, mostra a notificação ("Terminou · nome", com o projeto e a
   máquina embaixo) com a etiqueta `sessao-<id>`, para o Aviso novo da mesma sessão substituir o anterior e vibrar
   de novo. O toque abre o painel (ou foca o que já está aberto) no detalhe da sessão, pelo `#sessao=<id>`.
