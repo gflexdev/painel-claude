@@ -70,6 +70,28 @@ export function ensureRemote(name, { address } = {}) {
   return entry;
 }
 
+/**
+ * Token do relógio (ADR 0002), separado do token das Telas: só lê a lista do relógio.
+ * Gera um na primeira vez. Devolve { token, created }. Vale a partir do próximo início do servidor.
+ */
+export function ensureWatchToken() {
+  const stored = readStored();
+  const current = stored.watch?.token;
+  if (typeof current === 'string' && current.length >= 32) return { token: current, created: false };
+  const token = randomBytes(32).toString('base64url');
+  writeStored({ ...stored, watch: { ...stored.watch, token } });
+  return { token, created: true };
+}
+
+/** Apaga o token do relógio: ele deixa de valer no próximo início do servidor. false = não havia. */
+export function revokeWatchToken() {
+  const stored = readStored();
+  if (!stored.watch?.token) return false;
+  const { watch: _removed, ...rest } = stored;
+  writeStored(rest);
+  return true;
+}
+
 /** Guarda onde está o `claude` (o serviço do launchd não tem o PATH do terminal). null apaga. */
 export function rememberClaudeBin(path) {
   const stored = readStored();

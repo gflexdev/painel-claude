@@ -135,6 +135,7 @@ porque o `EventSource` não manda cabeçalho.
 | `POST /chat/wait` | entrada do hook do chat; só do próprio Mac |
 | `POST /hook`, `POST /permission`, `POST /usage` | entrada dos hooks e da status line; só do próprio Mac |
 | `POST /remote/hook`, `/remote/permission`, `/remote/transcript` | entrada das outras máquinas (veja abaixo) |
+| `GET /api/watch` | lista do relógio: `{ sessions, total, counts, usage? }` (veja abaixo). Token do relógio **ou** das Telas, **só no cabeçalho** |
 | `GET /health` | contagem de sessões, sem token |
 
 Item de `sessions` (enxuto de propósito, para caber num ESP32):
@@ -266,6 +267,31 @@ Limites:
 - Com VPN corporativa ligada (ex.: Cisco AnyConnect), o Mac às vezes perde as rotas do Tailscale. As sessões
   remotas param de atualizar até desligar a VPN.
 - O resumo das sessões remotas fica só na memória. Depois de reiniciar o servidor, volta no próximo evento.
+
+## Relógio Garmin (Forerunner 165)
+
+O app do relógio fica em `relogio/` (passo a passo em [relogio/README.md](../relogio/README.md)). Ele pede
+`GET /api/watch` pelo celular (Garmin Connect → Tailscale do celular → `tailscale serve`) a cada 10 s com o app
+aberto.
+
+- **A lista** (`src/watch.js`): só as sessões **em movimento** (rodando, esperando você, erro, terminou não visto),
+  não arquivadas nem sem sinal, até 8, na ordem da grade. Leva o que o mostrador redondo mostra, e nada além:
+  - em cada sessão: `id`, `name` (até 48 caracteres), `project`, `status` (`waiting` | `error` | `done` |
+    `working`, sendo `done` o terminou ainda não visto) e `age` (segundos na Situação); quando houver, `machine`,
+    `activity`, `context` (tokens), `model`, `turns`, `open` (segundos desde que foi aberta) e `ask`
+    (`{ kind, tool?, count }`: o tipo do pedido e o **nome** da ferramenta);
+  - `total` e `counts` (`waiting`, `working`, `done`, `error`): todas em movimento, não só as 8;
+  - `usage`: `fiveHour` e `sevenDay` (`{ percent, resetsIn }`, em segundos) e até 2 limites por modelo.
+  Nunca vai o comando, o pedido, o detalhe do tile nem trecho de resposta. O `tool` da grade é a descrição pronta
+  ("Bash: npm test") e leva o comando, por isso a grade passou a mandar também o `toolName`, e o relógio só recebe
+  esse. Com 8 sessões a resposta tem uns 2 kB, longe dos ~27 kB que o 165 aceita.
+- **O token do relógio** (ADR 0002): fica em `config.json` como `watch.token` (32 bytes, modo 600), separado do
+  token das Telas. Vale só em `/api/watch` e só no cabeçalho; nas outras rotas o servidor confere só o das Telas,
+  então ele recebe 401. O token das Telas também lê a lista. `node scripts/relogio.js token` gera e
+  `node scripts/relogio.js revogar` apaga; os dois reiniciam o serviço, porque o token é lido no início.
+- **Na build**: `relogio/scripts/build.sh` chama `node scripts/relogio.js segredos`, que grava o endereço (o
+  `DNSName` do `tailscale status`, ou `PAINEL_URL`) e o token em `relogio/gerado/Segredos.mc`, fora do git. O
+  token nunca aparece na tela. Não são *properties*, porque o simulador guarda as da primeira execução.
 
 ## Instalar como app (PWA)
 

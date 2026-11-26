@@ -1,6 +1,5 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { timingSafeEqual } from 'node:crypto';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadConfig, saveFeatures, DATA_DIR, STATE_FILE, EVENTS_LOG, USAGE_FILE, PANEL_FILE } from './config.js';
@@ -22,6 +21,8 @@ import { assetVersion, VERSION_PLACEHOLDER } from './assets.js';
 import { isLocalHook } from './network.js';
 import { holdPermission, readBody, readHookEvent, sendJson } from './http.js';
 import { createRemoteGate, createRemoteRoutes } from './remote.js';
+import { createScreenTokenCheck } from './tokens.js';
+import { createWatchRoutes } from './watch.js';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/', import.meta.url));
 const MAX_HOOK_BODY = 8 * 1024 * 1024;
@@ -80,7 +81,7 @@ const withPanelFlags = (session) => {
 const withPermission = (session) => {
   const [first, ...rest] = permissions.forSession(session.id);
   return first
-    ? { ...session, permission: { id: first.id, kind: first.kind, tool: first.tool, count: rest.length + 1, agentType: first.agentType } }
+    ? { ...session, permission: { id: first.id, kind: first.kind, tool: first.tool, toolName: first.toolName, count: rest.length + 1, agentType: first.agentType } }
     : session;
 };
 const decorate = (session) => withPanelFlags(withPermission(withParent(session)));
@@ -119,7 +120,6 @@ const discovery = createDiscovery({
   onError: logError,
 });
 const permissions = createPermissions({ timeoutMs: PERMISSION_WAIT_MS, onChange: () => store.notify() });
-const expectedToken = Buffer.from(config.token);
 const remoteGate = createRemoteGate(config.remotes);
 const remoteRoutes = createRemoteRoutes({
   gate: remoteGate,
@@ -131,13 +131,10 @@ const remoteRoutes = createRemoteRoutes({
 const isLoopback = (req) => isLocalHook(req.socket.remoteAddress ?? '', req.headers);
 const log = (line) => process.stdout.write(`[painel] ${new Date().toISOString()} ${line}\n`);
 
-/** GET aceita o token na URL (EventSource não manda cabeçalho); ações só pelo cabeçalho. */
-function hasToken(req, url, { headerOnly = false } = {}) {
-  const header = req.headers.authorization ?? '';
-  const fromQuery = headerOnly ? '' : url.searchParams.get('t') ?? '';
-  const given = Buffer.from(header.startsWith('Bearer ') ? header.slice(7) : fromQuery);
-  return given.length === expectedToken.length && timingSafeEqual(given, expectedToken);
-}
+/** Token das Telas: GET aceita o token na URL (EventSource não manda cabeçalho); ações só pelo cabeçalho. */
+const hasToken = createScreenTokenCheck(config.token);
+/** Relógio (ADR 0002): token próprio, que só vale na lista dele. Gerar ou revogar: `node scripts/relogio.js`. */
+const watchRoutes = createWatchRoutes({ store, watchToken: () => config.watch?.token ?? null, hasScreenToken: hasToken });
 
 const actions = createActionRoutes({
   store,
@@ -293,6 +290,7 @@ async function route(req, res) {
   if (req.method === 'POST' && pathname === '/usage') return handleUsage(req, res);
   if (req.method === 'POST' && pathname === '/permission') return handlePermissionHook(req, res);
   if (await remoteRoutes.handle(req, res, pathname)) return undefined;
+  if (watchRoutes.handle(req, res, url)) return undefined;
   if (await actions.handle(req, res, url)) return undefined;
   const decisionRoute = pathname.match(/^\/api\/permissions\/([\w-]{1,80})$/);
   const seenRoute = pathname.match(/^\/api\/sessions\/([\w-]{1,80})\/seen$/);
