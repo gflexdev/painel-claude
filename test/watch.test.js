@@ -5,7 +5,8 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { applyEvent, markSeen, toView } from '../src/state.js';
-import { createWatchRoutes, watchCounts, watchList, watchUsage, WATCH_LIMIT } from '../src/watch.js';
+import { createWatchRoutes, watchCounts, watchList, watchOrScreenToken, watchUsage, WATCH_LIMIT } from '../src/watch.js';
+import { createVigia, createVigiaRoutes } from '../src/vigia.js';
 import { createActionRoutes } from '../src/actions.js';
 import { createChat } from '../src/chat.js';
 import { createPanelData } from '../src/panel-data.js';
@@ -40,12 +41,13 @@ const USAGE = {
   source: 'app',
 };
 
-function fakeStore(raw, { archived = ['arquivada'], usage = USAGE } = {}) {
+function fakeStore(raw, { archived = ['arquivada'], usage = USAGE, vigia = null } = {}) {
   const now = T0 + 60_000;
-  // O servidor de verdade decora com o pedido de permissão (só o essencial, como na grade).
+  // O servidor de verdade decora com o pedido de permissão (só o essencial, como na grade) e com a Vigia.
   const decorate = (v) => ({
     ...v,
     ...(archived.includes(v.id) && { archived: true }),
+    ...(vigia?.isWatched(v.id) && { watched: true }),
     ...(v.status === 'waiting' && { permission: { id: 'p1', kind: 'permission', tool: 'Bash: rm -rf segredo', toolName: 'Bash', count: 2 } }),
   });
   return {
@@ -55,10 +57,16 @@ function fakeStore(raw, { archived = ['arquivada'], usage = USAGE } = {}) {
   };
 }
 
-/** Servidor de verdade com a rota do relógio e as rotas de ação, cada uma com sua conferência real de token. */
-async function setup({ store = fakeStore(sampleSessions()), watchToken = WATCH_TOKEN } = {}) {
+/**
+ * Servidor de verdade com a rota do relógio, as de vigiar e as de ação, cada uma com sua conferência real de token,
+ * ligadas como no server.js.
+ */
+async function setup({ store: given, watchToken = WATCH_TOKEN } = {}) {
+  const vigia = createVigia({ file: join(mkdtempSync(join(tmpdir(), 'painel-relogio-vigia-')), 'vigia.json') });
+  const store = given ?? fakeStore(sampleSessions(), { vigia });
   const hasScreenToken = createScreenTokenCheck(SCREEN_TOKEN);
   const watch = createWatchRoutes({ store, watchToken: () => watchToken, hasScreenToken });
+  const vigiaRoutes = createVigiaRoutes({ vigia, store, allowed: watchOrScreenToken(() => watchToken, hasScreenToken) });
   const actions = createActionRoutes({
     store,
     chat: createChat({ enabled: false }),
@@ -74,6 +82,7 @@ async function setup({ store = fakeStore(sampleSessions()), watchToken = WATCH_T
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
     if (watch.handle(req, res, url)) return;
+    if (vigiaRoutes.handle(req, res, url)) return;
     if (await actions.handle(req, res, url)) return;
     sendJson(res, 404, { success: false });
   });
@@ -88,7 +97,7 @@ async function setup({ store = fakeStore(sampleSessions()), watchToken = WATCH_T
     return { status: response.status, body: await response.json().catch(() => null), size: Number(response.headers.get('content-length')) };
   };
   const close = () => new Promise((resolve) => { server.closeAllConnections?.(); server.close(resolve); });
-  return { call, close };
+  return { vigia, call, close };
 }
 
 test('lista do relógio: só em movimento, sem arquivadas nem vistas, na ordem de urgência', async () => {
@@ -169,6 +178,57 @@ test('token do relógio recebe 401 em qualquer outra rota', async () => {
     assert.equal((await app.call('/api/settings', { token: SCREEN_TOKEN })).status, 200, 'o das Telas segue valendo');
   } finally {
     await app.close();
+  }
+});
+
+test('token do relógio vigia e para de vigiar, e a lista do relógio mostra a vigiada', async () => {
+  const app = await setup();
+  try {
+    const on = await app.call('/api/sessions/rodando/watch', { method: 'POST', token: WATCH_TOKEN });
+    assert.equal(on.status, 200);
+    assert.deepEqual(on.body.data, { id: 'rodando', watched: true });
+    assert.equal(app.vigia.isWatched('rodando'), true, 'a vigia é uma só: vale para todas as Telas');
+    const list = (await app.call('/api/watch', { token: WATCH_TOKEN })).body.data.sessions;
+    assert.deepEqual(list.filter((s) => s.watched).map((s) => s.id), ['rodando']);
+    assert.equal(list.find((s) => s.id === 'erro').watched, undefined, 'o campo só aparece quando verdadeiro');
+
+    const off = await app.call('/api/sessions/rodando/unwatch', { method: 'POST', token: WATCH_TOKEN });
+    assert.equal(off.status, 200);
+    assert.deepEqual(off.body.data, { id: 'rodando', watched: false });
+    const after = (await app.call('/api/watch', { token: WATCH_TOKEN })).body.data.sessions;
+    assert.equal(after.some((s) => s.watched), false);
+  } finally {
+    await app.close();
+  }
+});
+
+test('vigiar pelo painel aparece na lista do relógio, e o das Telas segue vigiando', async () => {
+  const app = await setup();
+  try {
+    assert.equal((await app.call('/api/sessions/esperando/watch', { method: 'POST', token: SCREEN_TOKEN })).status, 200);
+    const list = (await app.call('/api/watch', { token: WATCH_TOKEN })).body.data.sessions;
+    assert.equal(list.find((s) => s.id === 'esperando').watched, true);
+  } finally {
+    await app.close();
+  }
+});
+
+test('vigiar: sem token, token na URL, errado ou revogado dão 401', async () => {
+  const app = await setup();
+  try {
+    assert.equal((await app.call('/api/sessions/rodando/watch', { method: 'POST' })).status, 401);
+    assert.equal((await app.call('/api/sessions/rodando/watch', { method: 'POST', query: `?t=${WATCH_TOKEN}` })).status, 401);
+    assert.equal((await app.call('/api/sessions/rodando/watch', { method: 'POST', token: `${WATCH_TOKEN}x` })).status, 401);
+    assert.equal(app.vigia.isWatched('rodando'), false);
+  } finally {
+    await app.close();
+  }
+  const revoked = await setup({ watchToken: null });
+  try {
+    assert.equal((await revoked.call('/api/sessions/rodando/watch', { method: 'POST', token: WATCH_TOKEN })).status, 401);
+    assert.equal((await revoked.call('/api/sessions/rodando/unwatch', { method: 'POST', token: WATCH_TOKEN })).status, 401);
+  } finally {
+    await revoked.close();
   }
 });
 

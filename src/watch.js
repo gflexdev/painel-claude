@@ -56,6 +56,7 @@ function watchItem(s, now, startedAt) {
     status: statusOf(s),
     age: seconds(now - (s.since ?? now)),
     ...(s.machine && { machine: s.machine }),
+    ...(s.watched === true && { watched: true }),
     ...(s.activity && { activity: s.activity }),
     ...(ask && { ask }),
     ...(Number.isFinite(s.contextTokens) && s.contextTokens > 0 && { context: s.contextTokens }),
@@ -67,6 +68,7 @@ function watchItem(s, now, startedAt) {
 
 /**
  * Sessões da grade (já na ordem de urgência) → lista do relógio, até 8.
+ * `watched: true` só nas Sessões vigiadas (a grade já vem decorada pela Vigia).
  * `status` vai como 'waiting' | 'error' | 'done' | 'working' (done = terminou ainda não visto); `age` e `open` em
  * segundos.
  * @param {Array<object>} sessions visão das sessões, como em store.view().sessions
@@ -118,14 +120,24 @@ export function watchSnapshot(view, startedAtOf) {
 }
 
 /**
- * Rota do relógio. Aceita o token do relógio e o das Telas, só no cabeçalho.
+ * O que o relógio pode fazer (ler a lista e vigiar) aceita o token do relógio e o das Telas, só no cabeçalho.
  * O token do relógio não vale em nenhuma outra rota: o resto do servidor só confere o das Telas.
+ * @param {() => (string | null)} watchToken
+ * @param {(req: object, url: URL, opts: { headerOnly: boolean }) => boolean} hasScreenToken
+ * @returns {(req: object, url: URL) => boolean}
+ */
+export function watchOrScreenToken(watchToken, hasScreenToken) {
+  return (req, url) => tokenMatches(bearerOf(req), watchToken()) || hasScreenToken(req, url, { headerOnly: true });
+}
+
+/**
+ * Rota do relógio (a lista). Para vigiar, o relógio usa as rotas da Vigia, com a mesma conferência.
  * @param {{ store: { view: () => object, get?: (id: string) => (object | undefined) },
  *   watchToken: () => (string | null),
  *   hasScreenToken: (req: object, url: URL, opts: { headerOnly: boolean }) => boolean }} deps
  */
 export function createWatchRoutes({ store, watchToken, hasScreenToken }) {
-  const allowed = (req, url) => tokenMatches(bearerOf(req), watchToken()) || hasScreenToken(req, url, { headerOnly: true });
+  const allowed = watchOrScreenToken(watchToken, hasScreenToken);
   const startedAtOf = (id) => store.get?.(id)?.startedAt ?? null;
 
   return {
