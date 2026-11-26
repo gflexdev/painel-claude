@@ -88,6 +88,12 @@ O dono vigia uma sessão pelo detalhe dela no painel web (`POST /api/sessions/:i
 em `~/.config/painel-claude/vigia.json` (modo 600, escrita atômica, até 500 ids, só ids `[\w-]{1,80}`) e volta
 depois de reiniciar o painel. É uma só para todas as Telas: a lista das sessões ganha `watched: true`.
 
+Também dá para vigiar no mesmo toque de mandar um pedido ou abrir uma sessão nova: as duas rotas aceitam
+`vigiar: true` (a caixa "vigiar" dos dois formulários). No pedido, a vigia liga só se a mensagem foi aceita (entregue
+ou na fila). Na sessão nova, o id ainda não existe quando a rota responde: a vigia liga quando o painel acha a sessão
+no `claude agents` e liga o id dela ao id curto (até 12 tentativas, de 2,5 em 2,5 s). Se o id nunca aparece, nada fica
+vigiado e o log diz "ficou sem vigia".
+
 O store chama a Vigia num ponto só (`onSessionChange(antes, depois, evento)` em `src/store.js`) a cada mudança
 aplicada: evento de hook local ou remoto, adoção pelo `claude agents`, encerramento pelo painel e sessão esquecida
 (`depois` vazio, também as esquecidas enquanto o painel estava desligado). As regras (`src/vigia.js`, as do
@@ -160,9 +166,9 @@ porque o `EventSource` não manda cabeçalho.
 | `POST /api/sessions/:id/watch`, `/unwatch` | vigia ou para de vigiar. 200 `{ id, watched }`; 404 se a sessão não existe ou foi encerrada (só em `watch`). Token das Telas **só no cabeçalho**; o do relógio não vale |
 | `GET /api/settings` | `{ features, canChange }`: `canChange` é `true` só no próprio Mac (loopback sem proxy) |
 | `POST /api/settings` | `{ chat?, launch?, closeRemove? }` (booleanos). Token no cabeçalho **e** do próprio Mac; senão 403 |
-| `POST /api/sessions/:id/message` | `{ text }` (até 4000). Ajuste `chat`. 200 `{ status: delivered \| queued }`; 409 se a sessão ainda não ouve o painel |
+| `POST /api/sessions/:id/message` | `{ text, vigiar? }` (até 4000). Ajuste `chat`. 200 `{ status: delivered \| queued, watched }`; 409 se a sessão ainda não ouve o painel. `vigiar: true` liga a vigia quando a mensagem é aceita |
 | `GET /api/projects` | `{ projects: [{ path, name }], canLaunch }`: pastas de projeto vistas nas sessões. Ajuste `launch` |
-| `POST /api/sessions` | `{ cwd, prompt, name? }` ou `{ parentId, prompt, name? }`. Ajuste `launch`. Roda `claude --bg` |
+| `POST /api/sessions` | `{ cwd, prompt, name?, vigiar? }` ou `{ parentId, prompt, name?, vigiar? }`. Ajuste `launch`. Roda `claude --bg`. 200 `{ jobId, vigiar }`; com `vigiar: true`, a vigia liga quando o id da sessão nova aparece |
 | `POST /api/sessions/:id/close`, `/remove` | `claude stop` / `claude rm`, só sessões em segundo plano. Ajuste `closeRemove` |
 | `POST /chat/wait` | entrada do hook do chat; só do próprio Mac |
 | `POST /hook`, `POST /permission`, `POST /usage` | entrada dos hooks e da status line; só do próprio Mac |

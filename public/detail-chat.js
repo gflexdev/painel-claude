@@ -1,5 +1,6 @@
 // "Mensagem para esta sessão" no pé do detalhe (Ajustes → "Mandar mensagens às sessões") e a conversa pelo
-// painel: as últimas mensagens mandadas daqui, com a situação de cada uma (entregue, na fila, descartada).
+// painel: as últimas mensagens mandadas daqui, com a situação de cada uma (entregue, na fila, descartada). A caixa
+// "vigiar" liga a vigia junto com a mensagem; some quando a sessão já é vigiada.
 import { el } from './format.js';
 
 const $ = (id) => document.getElementById(id);
@@ -26,6 +27,8 @@ export function createChatBox({ api, sessionId, onSent = () => {} }) {
   const note = $('chat-note');
   const historyBox = $('chat-history');
   const historyList = $('chat-list');
+  const watchRow = $('chat-watch-row');
+  const watch = $('chat-watch');
   let sending = false;
   let state = 'none';
   let feedback = '';
@@ -33,6 +36,7 @@ export function createChatBox({ api, sessionId, onSent = () => {} }) {
   const sync = () => {
     const usable = state === 'ready' || state === 'busy';
     input.disabled = !usable || sending;
+    watch.disabled = !usable || sending;
     button.disabled = !usable || sending || !input.value.trim();
     note.textContent = feedback || NOTES[state];
   };
@@ -58,12 +62,15 @@ export function createChatBox({ api, sessionId, onSent = () => {} }) {
       return;
     }
     state = data.machine ? 'remote' : data.chat ?? 'none';
+    // `watched` só vem quando verdadeiro.
+    watchRow.hidden = data.watched === true;
     if (Array.isArray(data.chatHistory)) fillHistory(data.chatHistory);
     sync();
   }
 
   function reset() {
     input.value = '';
+    watch.checked = false;
     feedback = '';
     state = 'none';
     fillHistory([]);
@@ -78,10 +85,12 @@ export function createChatBox({ api, sessionId, onSent = () => {} }) {
     feedback = 'enviando…';
     sync();
     try {
-      const { status } = await api.post(`/api/sessions/${encodeURIComponent(id)}/message`, { text });
+      const vigiar = watch.checked;
+      const { status, watched } = await api.post(`/api/sessions/${encodeURIComponent(id)}/message`, { text, ...(vigiar && { vigiar }) });
       if (sessionId() === id) {
         input.value = '';
-        feedback = SENT[status] ?? '✓ Enviada.';
+        watch.checked = false;
+        feedback = `${SENT[status] ?? '✓ Enviada.'}${vigiar && watched ? ' Vigiada: chega um Aviso quando ela terminar.' : ''}`;
         onSent();
       }
     } catch (error) {
