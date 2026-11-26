@@ -21,6 +21,7 @@ Sessões do Claude Code ──hooks──▶ servidor no Mac (127.0.0.1:7777) �
 | `src/background.js` | Stop com trabalho em segundo plano: a sessão continua "rodando". |
 | `src/discover.js` | Sessões já abertas, pelo `claude agents --json`. |
 | `src/panel-data.js` | O que é só do painel: arquivadas e sessões abertas por ele (`painel.json`). |
+| `src/vigia.js` | Sessões vigiadas (`vigia.json`), as regras que fazem nascer um Aviso e as rotas de vigiar. |
 | `src/actions.js` | Rotas de ação: arquivar, Ajustes, mensagem, abrir, fechar e apagar. |
 | `src/chat.js`, `src/control.js` | Fila das mensagens para as sessões; `claude --bg`, `stop` e `rm`. |
 | `hooks/` | Scripts que o Claude Code chama: `enviar-evento.sh`, `permissao.sh`, `esperar-mensagem.sh`, `statusline.sh`, `enviar-uso.sh`. |
@@ -80,6 +81,33 @@ plano: …" (`src/background.js`) e não vira "terminou · ver". Sem o campo (ve
 subagentes ainda ativos que deram sinal nos últimos 15 min e comandos Bash com `run_in_background` lançados no
 turno. Com a lista presente e vazia, vale ela: terminou. Quem espera em segundo plano não fica `stale`.
 
+## Vigia e Avisos
+
+O dono vigia uma sessão pelo detalhe dela no painel web (`POST /api/sessions/:id/watch` e `/unwatch`). A vigia fica
+em `~/.config/painel-claude/vigia.json` (modo 600, escrita atômica, até 500 ids, só ids `[\w-]{1,80}`) e volta
+depois de reiniciar o painel. É uma só para todas as Telas: a lista das sessões ganha `watched: true`.
+
+O store chama a Vigia num ponto só (`onSessionChange(antes, depois, evento)` em `src/store.js`) a cada mudança
+aplicada: evento de hook local ou remoto, adoção pelo `claude agents`, encerramento pelo painel e sessão esquecida
+(`depois` vazio, também as esquecidas enquanto o painel estava desligado). As regras (`src/vigia.js`, as do
+`GLOSSARY.md`):
+
+- Só **Sessão vigiada** gera Aviso.
+- Nasce Aviso quando a Situação **muda** para terminou (`idle` não vista), esperando você ou erro. Pedidos novos
+  com a sessão já em esperando você não repetem o Aviso.
+- Nasce também quando o turno acaba (Stop) e a sessão fica rodando só por comandos em segundo plano: todas as
+  tarefas abertas de `background_tasks` são `shell`, ou, sem a lista, valem os comandos com `run_in_background`
+  do turno e nenhum subagente ativo. Subagente, workflow ou colega entre elas: sem Aviso.
+- Terminou e erro encerram a vigia; esperando você e comando em segundo plano a mantêm.
+- Sessão encerrada ou esquecida perde a vigia, sem Aviso.
+- Sessões de outras máquinas seguem as mesmas regras.
+
+O Aviso leva só `{ id, situation: 'done' | 'error' | 'waiting' | 'background', name, project, machine? }`. O nome
+é o título do Claude ou o do `claude agents`, nunca o primeiro pedido (sem nenhum dos dois, vai "sessão" e o
+começo do id). Nunca leva o detalhe do tile, o comando, o pedido nem trecho da resposta. Por enquanto cada Aviso só
+vai ao log do painel (`Aviso: done · nome · projeto · máquina`); o envio é a função `send` da Vigia, e falha nela
+não atrasa nem derruba a ingestão dos eventos.
+
 ## Sessões já abertas (`claude agents --json`)
 
 A cada 60 s o servidor roda `claude agents --json` (documentado: "Print active sessions (interactive and
@@ -126,6 +154,7 @@ porque o `EventSource` não manda cabeçalho.
 | `POST /api/permissions/:id` | `{ "decision": "allow" \| "deny", "answers"?: { pergunta: opção \| [opções] \| texto } }`. Token **só no cabeçalho**. Responde 410 se o pedido já foi respondido e 400 se faltar resposta |
 | `POST /api/sessions/:id/seen` | tira o "terminou · ver" da sessão |
 | `POST /api/sessions/:id/archive`, `/unarchive` | arquiva ou desarquiva só no painel. Token **só no cabeçalho** |
+| `POST /api/sessions/:id/watch`, `/unwatch` | vigia ou para de vigiar. 200 `{ id, watched }`; 404 se a sessão não existe ou foi encerrada (só em `watch`). Token das Telas **só no cabeçalho**; o do relógio não vale |
 | `GET /api/settings` | `{ features, canChange }`: `canChange` é `true` só no próprio Mac (loopback sem proxy) |
 | `POST /api/settings` | `{ chat?, launch?, closeRemove? }` (booleanos). Token no cabeçalho **e** do próprio Mac; senão 403 |
 | `POST /api/sessions/:id/message` | `{ text }` (até 4000). Ajuste `chat`. 200 `{ status: delivered \| queued }`; 409 se a sessão ainda não ouve o painel |
@@ -159,6 +188,7 @@ Item de `sessions` (enxuto de propósito, para caber num ESP32):
 - Campos opcionais, só quando valem: `scheduled: true` (tarefa agendada do app), `archived: true` (arquivada no
   painel), `background: true` (sessão em segundo plano: dá para fechar e apagar) e `chat: 'ready' | 'busy'` (com o
   ajuste de mensagens ligado e a sessão ouvindo o painel). Sessão aberta pelo "+ sessão filha" ganha `parentId`.
+  `watched: true` marca a **Sessão vigiada** (também nas de outras máquinas); o widget e o display a ignoram.
 - O snapshot leva `features: { chat, launch, closeRemove }`, os Ajustes.
 - O detalhe traz também `lastPromptAt`, `lastChat` (`{ text, at }`, a última mensagem do painel) e `chatHistory`
   (até 10: `{ id, text, at, status: pending | delivered | dropped }`).
