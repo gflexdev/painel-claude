@@ -28,9 +28,32 @@ function redact(event) {
   )));
 }
 
-/** Guarda o estado das sessões, salva em disco e avisa quem está ouvindo. */
-export function createStore({ stateFile, eventsLog, debug, onError, decorate = (s) => s, version = '', extras = () => ({}) }) {
-  let sessions = prune(loadState(stateFile), Date.now());
+/** Ids que mudaram (entraram, saíram ou viraram outro objeto) entre dois mapas de sessões. */
+function changedIds(before, after) {
+  return [...new Set([...Object.keys(before), ...Object.keys(after)])].filter((id) => before[id] !== after[id]);
+}
+
+/**
+ * Guarda o estado das sessões, salva em disco e avisa quem está ouvindo.
+ * `onSessionChange(antes, depois, evento)` é chamado para cada sessão que mudou por um evento de hook (local ou
+ * remoto), pela adoção, pelo encerramento pelo painel ou por ser esquecida (depois = undefined, evento = null).
+ */
+export function createStore({
+  stateFile, eventsLog, debug, onError, decorate = (s) => s, version = '', extras = () => ({}), onSessionChange = () => {},
+}) {
+  const report = (before, after, event) => changedIds(before, after).forEach((id) => {
+    try {
+      onSessionChange(before[id], after[id], event);
+    } catch (error) {
+      onError('falha ao observar a mudança da sessão', error);
+    }
+  });
+  const loaded = loadState(stateFile);
+  let sessions = prune(loaded, Date.now());
+  // Sessões esquecidas enquanto o painel estava desligado também contam como mudança (depois de montar tudo,
+  // para quem observa já poder usar o store).
+  const pruned = sessions;
+  queueMicrotask(() => report(loaded, pruned, null));
   const listeners = new Set();
   let saveTimer = null;
   let broadcastTimer = null;
@@ -56,6 +79,14 @@ export function createStore({ stateFile, eventsLog, debug, onError, decorate = (
   const changed = () => {
     saveTimer ??= setTimeout(save, SAVE_DELAY_MS);
     notify();
+  };
+
+  /** O único ponto em que o estado das sessões muda por evento, adoção, encerramento ou esquecimento. */
+  const commit = (next, event = null) => {
+    const before = sessions;
+    sessions = next;
+    changed();
+    report(before, next, event);
   };
 
   const view = () => ({ now: Date.now(), version, ...extras(), sessions: toView(sessions, Date.now()).map(decorate) });
@@ -101,8 +132,7 @@ export function createStore({ stateFile, eventsLog, debug, onError, decorate = (
       if (previous && machineOf(previous) !== machine) return { conflict: true };
       const next = applyEvent(sessions, event, Date.now(), machine);
       if (next === sessions) return { wantsTranscript: false };
-      sessions = next;
-      changed();
+      commit(next, event);
       const session = sessions[event.session_id];
       if (!wantsMeta(session, event.hook_event_name)) return { wantsTranscript: false };
       if (machine) {
@@ -139,8 +169,7 @@ export function createStore({ stateFile, eventsLog, debug, onError, decorate = (
       const before = sessions;
       const next = adoptSessions(sessions, found, Date.now(), options);
       if (next === before) return 0;
-      sessions = next;
-      changed();
+      commit(next);
       const touched = Object.values(next).filter((s) => s !== before[s.id]);
       touched.filter((s) => s.transcriptPath && s.status !== 'ended')
         .forEach((s) => refreshMeta(s.id, s.transcriptPath, true));
@@ -156,15 +185,14 @@ export function createStore({ stateFile, eventsLog, debug, onError, decorate = (
     /** A sessão saiu por ordem do painel (fechada ou apagada): encerra sem esperar o hook dela. */
     end(id) {
       if (!sessions[id] || sessions[id].status === 'ended') return;
-      sessions = applyEvent(sessions, { hook_event_name: 'SessionEnd', session_id: id }, Date.now(), machineOf(sessions[id]));
-      changed();
+      const event = { hook_event_name: 'SessionEnd', session_id: id };
+      commit(applyEvent(sessions, event, Date.now(), machineOf(sessions[id])), event);
     },
     tick() {
       const next = prune(sessions, Date.now());
       if (next !== sessions) {
-        sessions = next;
+        commit(next);
         forget();
-        changed();
       }
     },
     get: (id) => sessions[id],

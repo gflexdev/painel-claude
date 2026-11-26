@@ -137,6 +137,7 @@ body[data-resizing] .tile { animation: none; }
 }
 .act-btn[hidden] { display: none; }
 .act-btn:hover { border-color: var(--ink-faint); }
+.act-btn.watch[aria-pressed='true'] { border-color: var(--question); color: var(--question); }
 .act-btn.danger { border-color: #4a2630; background: transparent; color: #ff8a9c; }
 .act-btn[data-armed] { border-color: var(--waiting); background: #241820; color: #ff8a9c; font-weight: 600; }
 .act-btn:focus-visible { outline: 2px solid var(--unseen); outline-offset: 2px; }

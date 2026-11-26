@@ -23,6 +23,7 @@ import { holdPermission, readBody, readHookEvent, sendJson } from './http.js';
 import { createRemoteGate, createRemoteRoutes } from './remote.js';
 import { createScreenTokenCheck } from './tokens.js';
 import { createWatchRoutes } from './watch.js';
+import { avisoLine, createVigia, createVigiaRoutes } from './vigia.js';
 import { ensureVapidKeys, DEVICES_FILE } from './config.js';
 import { createPush, createPushRoutes } from './push.js';
 
@@ -86,7 +87,15 @@ const withPermission = (session) => {
     ? { ...session, permission: { id: first.id, kind: first.kind, tool: first.tool, toolName: first.toolName, count: rest.length + 1, agentType: first.agentType } }
     : session;
 };
-const decorate = (session) => withPanelFlags(withPermission(withParent(session)));
+/** Sessão vigiada leva `watched: true` (só quando verdadeiro), também as de outras máquinas. */
+const decorate = (session) => vigia.decorate(withPanelFlags(withPermission(withParent(session))));
+/** Vigia: por enquanto cada Aviso só vai ao log (o Web Push chega em outro ticket). */
+const vigia = createVigia({
+  file: join(DATA_DIR, 'vigia.json'),
+  send: (aviso) => log(avisoLine(aviso)),
+  onChange: () => store.notify(),
+  onError: logError,
+});
 const ASSET_VERSION = assetVersion(PUBLIC_DIR);
 const store = createStore({
   stateFile: STATE_FILE,
@@ -96,6 +105,7 @@ const store = createStore({
   decorate,
   version: ASSET_VERSION,
   extras: () => ({ usage: usage.view(), features }),
+  onSessionChange: (before, after, event) => vigia.observe(before, after, event),
 });
 const usage = createUsage({ file: USAGE_FILE, onChange: () => store.notify(), onError: logError });
 const appLinks = createAppLinks({ onChange: () => store.notify(), onError: logError });
@@ -137,6 +147,8 @@ const log = (line) => process.stdout.write(`[painel] ${new Date().toISOString()}
 const hasToken = createScreenTokenCheck(config.token);
 /** Relógio (ADR 0002): token próprio, que só vale na lista dele. Gerar ou revogar: `node scripts/relogio.js`. */
 const watchRoutes = createWatchRoutes({ store, watchToken: () => config.watch?.token ?? null, hasScreenToken: hasToken });
+/** Vigiar e parar de vigiar: por enquanto só o token das Telas, no cabeçalho (o do relógio fica barrado). */
+const vigiaRoutes = createVigiaRoutes({ vigia, store, allowed: (req, url) => hasToken(req, url, { headerOnly: true }), log });
 
 /** Avisos por Web Push (ADR 0001): chaves VAPID no config.json, inscrições dos aparelhos em aparelhos.json. */
 const push = createPush({ file: DEVICES_FILE, vapid: ensureVapidKeys(), subject: config.vapid?.subject, log, onError: logError });
@@ -297,6 +309,7 @@ async function route(req, res) {
   if (req.method === 'POST' && pathname === '/permission') return handlePermissionHook(req, res);
   if (await remoteRoutes.handle(req, res, pathname)) return undefined;
   if (watchRoutes.handle(req, res, url)) return undefined;
+  if (vigiaRoutes.handle(req, res, url)) return undefined;
   if (await pushRoutes.handle(req, res, url)) return undefined;
   if (await actions.handle(req, res, url)) return undefined;
   const decisionRoute = pathname.match(/^\/api\/permissions\/([\w-]{1,80})$/);
