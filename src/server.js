@@ -25,7 +25,7 @@ import { createScreenTokenCheck } from './tokens.js';
 import { createWatchRoutes } from './watch.js';
 import { avisoLine, createVigia, createVigiaRoutes } from './vigia.js';
 import { ensureVapidKeys, DEVICES_FILE } from './config.js';
-import { createPush, createPushRoutes } from './push.js';
+import { createPush, createPushRoutes, pushAviso } from './push.js';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/', import.meta.url));
 const MAX_HOOK_BODY = 8 * 1024 * 1024;
@@ -89,10 +89,13 @@ const withPermission = (session) => {
 };
 /** Sessão vigiada leva `watched: true` (só quando verdadeiro), também as de outras máquinas. */
 const decorate = (session) => vigia.decorate(withPanelFlags(withPermission(withParent(session))));
-/** Vigia: por enquanto cada Aviso só vai ao log (o Web Push chega em outro ticket). */
+/** Vigia: cada Aviso vai ao log e, por Web Push, a todos os aparelhos inscritos (sem esperar o envio). */
 const vigia = createVigia({
   file: join(DATA_DIR, 'vigia.json'),
-  send: (aviso) => log(avisoLine(aviso)),
+  send: (aviso) => {
+    log(avisoLine(aviso));
+    push.notify(pushAviso(aviso));
+  },
   onChange: () => store.notify(),
   onError: logError,
 });

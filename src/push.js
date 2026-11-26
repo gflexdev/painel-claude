@@ -144,6 +144,21 @@ export function createPush({ file, vapid, subject = DEFAULT_SUBJECT, transport =
   };
 }
 
+/**
+ * O Aviso da Vigia (`{ id, situation, name, project, machine? }`, de src/vigia.js) no formato que o service worker
+ * mostra: `{ status, name, project, machine?, sessionId }`. Campo a campo, para nada além disso ir ao aparelho.
+ * @param {{ id: string, situation: string, name: string, project: string, machine?: string }} aviso
+ */
+export function pushAviso(aviso) {
+  return {
+    status: aviso.situation,
+    name: aviso.name,
+    project: aviso.project,
+    ...(aviso.machine && { machine: aviso.machine }),
+    sessionId: aviso.id,
+  };
+}
+
 export const PUSH_ROUTES = Object.freeze({ key: '/api/push/key', subscribe: '/api/push/subscribe', unsubscribe: '/api/push/unsubscribe', test: '/api/push/test' });
 /** O Aviso de teste: sem sessão, só para conferir que o caminho até o aparelho (e o relógio) funciona. */
 export const TEST_AVISO = Object.freeze({ status: 'test' });

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createDecipheriv, createECDH, createPublicKey, hkdfSync, verify } from 'node:crypto';
+import { createPublicKey, verify } from 'node:crypto';
+import { decrypt } from './webpush-device.js';
 import {
   encryptPayload, fromB64url, generateVapidKeys, isPublicKey, isVapidPair, MAX_PAYLOAD_BYTES, vapidAuthorization, vapidJwt,
 } from '../src/webpush.js';
@@ -16,25 +17,6 @@ const RFC = Object.freeze({
   auth: 'BTBZMqHH6r4Tts7J_aSIgg',
   body: 'DGv6ra1nlYgDCS1FRnbzlwAAEABBBP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A_yl95bQpu6cVPTpK4Mqgkf1CXztLVBSt2Ks3oZwbuwXPXLWyouBWLVWGNWQexSgSxsj_Qulcy4a-fN',
 });
-
-/** O lado do aparelho (RFC 8291): abre o corpo com a chave privada dele. */
-function decrypt(body, uaPrivate, auth) {
-  const salt = body.subarray(0, 16);
-  const idLength = body.readUInt8(20);
-  const asPublic = body.subarray(21, 21 + idLength);
-  const record = body.subarray(21 + idLength);
-  const ecdh = createECDH('prime256v1');
-  ecdh.setPrivateKey(uaPrivate);
-  const keyInfo = Buffer.concat([Buffer.from('WebPush: info\0'), ecdh.getPublicKey(), asPublic]);
-  const ikm = Buffer.from(hkdfSync('sha256', ecdh.computeSecret(asPublic), auth, keyInfo, 32));
-  const cek = Buffer.from(hkdfSync('sha256', ikm, salt, Buffer.from('Content-Encoding: aes128gcm\0'), 16));
-  const nonce = Buffer.from(hkdfSync('sha256', ikm, salt, Buffer.from('Content-Encoding: nonce\0'), 12));
-  const decipher = createDecipheriv('aes-128-gcm', cek, nonce);
-  decipher.setAuthTag(record.subarray(-16));
-  const padded = Buffer.concat([decipher.update(record.subarray(0, -16)), decipher.final()]);
-  assert.equal(padded.at(-1), 2, 'o registro termina com a marca de último registro');
-  return padded.subarray(0, -1).toString('utf8');
-}
 
 test('criptografia confere byte a byte com o exemplo da RFC 8291', () => {
   const body = encryptPayload(RFC.plaintext, { p256dh: RFC.uaPublic, auth: RFC.auth }, {
