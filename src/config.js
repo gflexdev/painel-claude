@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
+import { generateVapidKeys, isVapidPair } from './webpush.js';
 
 export const DATA_DIR = process.env.PAINEL_DIR ?? join(homedir(), '.config', 'painel-claude');
 export const CONFIG_FILE = join(DATA_DIR, 'config.json');
@@ -9,6 +10,8 @@ export const STATE_FILE = join(DATA_DIR, 'state.json');
 export const EVENTS_LOG = join(DATA_DIR, 'eventos.log');
 export const USAGE_FILE = join(DATA_DIR, 'uso.json');
 export const PANEL_FILE = join(DATA_DIR, 'painel.json');
+/** Inscrições Web Push dos aparelhos que deram licença para receber Avisos. */
+export const DEVICES_FILE = join(DATA_DIR, 'aparelhos.json');
 
 /**
  * Ajustes que deixam o painel agir nas sessões (grupo 2). Todos começam desligados e só mudam pelo próprio Mac.
@@ -81,6 +84,19 @@ export function ensureWatchToken() {
   const token = randomBytes(32).toString('base64url');
   writeStored({ ...stored, watch: { ...stored.watch, token } });
   return { token, created: true };
+}
+
+/**
+ * Chaves VAPID do Web Push (ADR 0001): geradas na primeira vez e guardadas em `config.json` (0600), como o token
+ * das Telas. Trocar as chaves invalida as inscrições dos aparelhos (cada um pede a licença de novo).
+ * @returns {{ publicKey: string, privateKey: string }}
+ */
+export function ensureVapidKeys() {
+  const stored = readStored();
+  if (isVapidPair(stored.vapid)) return { publicKey: stored.vapid.publicKey, privateKey: stored.vapid.privateKey };
+  const keys = generateVapidKeys();
+  writeStored({ ...stored, vapid: { ...stored.vapid, ...keys } });
+  return keys;
 }
 
 /** Apaga o token do relógio: ele deixa de valer no próximo início do servidor. false = não havia. */
