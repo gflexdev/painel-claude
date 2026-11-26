@@ -1,6 +1,6 @@
 // Service worker do painel: sem cache (o estado tem que ser sempre o do Mac agora).
-// Só cuida de uma coisa: se o Mac não responder ao abrir o app, mostra uma tela de "sem conexão"
-// em vez do erro do navegador.
+// Cuida de duas coisas: se o Mac não responder ao abrir o app, mostra uma tela de "sem conexão" em vez do erro do
+// navegador; e recebe os Avisos (Web Push), mesmo com o app fechado, e os mostra como notificação.
 const OFFLINE_PAGE = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0e0f12">
 <title>Painel Claude</title>
@@ -37,4 +37,54 @@ self.addEventListener('fetch', (event) => {
     status: 503,
     headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
   })));
+});
+
+// Avisos (Web Push). O payload chega já aberto pelo navegador: { status, name?, project?, machine?, sessionId? }.
+// Nunca leva comando nem trecho de resposta, porque aparece na tela bloqueada e no relógio.
+const AVISO_TITLES = Object.freeze({
+  done: 'Terminou',
+  error: 'Erro',
+  waiting: 'Esperando você',
+  background: 'Só comandos em segundo plano',
+});
+const SESSION_ID = /^[\w-]{1,80}$/;
+
+function avisoNotification(aviso) {
+  if (aviso.status === 'test') {
+    return { title: 'Aviso de teste', body: 'Os Avisos do painel chegam neste aparelho.', tag: 'painel-teste', url: '/' };
+  }
+  const id = SESSION_ID.test(aviso.sessionId ?? '') ? aviso.sessionId : null;
+  const situation = AVISO_TITLES[aviso.status] ?? 'Aviso';
+  const name = String(aviso.name ?? '').slice(0, 80);
+  const where = [aviso.project, aviso.machine].filter((part) => typeof part === 'string' && part).join(' · ');
+  return {
+    title: name ? `${situation} · ${name}` : situation,
+    body: where,
+    tag: id ? `sessao-${id}` : 'painel-aviso',
+    url: id ? `/#sessao=${id}` : '/',
+  };
+}
+
+self.addEventListener('push', (event) => {
+  let aviso = {};
+  try { aviso = event.data?.json() ?? {}; } catch { /* payload estranho: mostra um Aviso genérico */ }
+  const { title, body, tag, url } = avisoNotification(aviso);
+  // Uma etiqueta por sessão: o Aviso novo da mesma sessão substitui o anterior na bandeja e vibra de novo.
+  event.waitUntil(self.registration.showNotification(title, {
+    body, tag, renotify: true, icon: '/icon-192.png', badge: '/icon-192.png', data: { url },
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url ?? '/', self.location.origin);
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const open = windows.find((client) => new URL(client.url).origin === url.origin);
+    if (!open) return self.clients.openWindow(url.href);
+    await open.focus();
+    // A página já aberta abre o detalhe pelo #sessao= (hashchange), sem recarregar.
+    if (url.hash) open.postMessage({ type: 'open-hash', hash: url.hash });
+    return undefined;
+  })());
 });

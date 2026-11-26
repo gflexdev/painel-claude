@@ -227,6 +227,46 @@ textarea.launch-input { resize: vertical; min-height: 96px; }
   color: #ffc2cd;
 }
 
+/* Avisos neste aparelho: vale por aparelho, separado das chaves que valem para o Mac. */
+.settings-section {
+  margin: 18px 0 8px;
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.push-setting { cursor: default; }
+.push-state {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font: 600 10px/1.4 var(--font-mono);
+  vertical-align: 1px;
+  color: var(--bg);
+  background: var(--ink-faint);
+}
+.push-on { background: var(--idle); }
+.push-blocked { background: var(--waiting); }
+.push-unsupported { background: var(--ended); color: var(--ink); }
+.push-busy { background: var(--line); color: var(--ink-dim); }
+.push-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.push-actions:empty { display: none; }
+.push-btn {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--tile-hi);
+  color: var(--ink);
+  font: 600 12px var(--font-display);
+  cursor: pointer;
+  transition: background 160ms, border-color 160ms, transform 160ms var(--ease-out);
+}
+.push-btn:hover { border-color: var(--unseen); }
+.push-btn:active { transform: scale(0.97); }
+.push-btn:focus-visible { outline: 2px solid var(--unseen); outline-offset: 2px; }
+.push-btn.push-quiet { background: transparent; color: var(--ink-dim); }
+
 .archived-list { display: grid; gap: 8px; max-height: 60vh; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
 .archived-item { display: flex; gap: 8px; align-items: stretch; }
 .archived-open {

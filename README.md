@@ -228,7 +228,12 @@ O Tailscale cria uma rede privada entre os seus aparelhos. O painel continua vis
   "fechar ▴" volta ao quadrado. Várias famílias podem ficar abertas, e o aparelho lembra quais.
 - **◇ Subagentes:** losangos roxos na faixa do quadrado; dentro da família aberta, etiquetas com o que cada um faz.
 - **Estilo do personagem:** o botão com o bonequinho, ao lado do relógio.
-- **Ajustes:** o botão ⚙. No celular a janela só mostra como está, com o aviso "Para mudar, abra o painel no Mac".
+- **Ajustes:** o botão ⚙. No celular as chaves só mostram como estão, com o aviso "Para mudar, abra o painel no
+  Mac".
+- **Avisos neste aparelho:** nos Ajustes, em "Neste aparelho". Toque em **Ligar** e permita as notificações: o
+  Aviso chega mesmo com o app do painel fechado, e o relógio Garmin repete. **Mandar Aviso de teste** confere o
+  caminho todo. A linha diz se o aparelho está recebendo, bloqueado (libere nas informações do site) ou sem
+  suporte. No Android, instale o painel como app pelo Chrome, pelo link `https` do Tailscale.
 - **Mac fora do ar:** uma faixa vermelha no topo diz há quanto tempo o painel não tem notícia do Mac.
 
 ## Segurança
@@ -237,6 +242,9 @@ O Tailscale cria uma rede privada entre os seus aparelhos. O painel continua vis
   mande o seu link para ninguém, nem em print.
 - Cada pessoa instala no próprio Mac e tem o próprio token, gerado na instalação.
 - Nada sai do seu Mac. O painel não usa servidor externo, e o Tailscale só liga os seus aparelhos.
+  **A exceção são os Avisos**, se você ligar: o Aviso passa pelo serviço de push do navegador do celular (no
+  Android, o do Google), criptografado de ponta a ponta para o aparelho, e leva só a situação, o nome da sessão e o
+  projeto. Nunca o comando nem um trecho da resposta, porque aparece na tela bloqueada e no relógio.
 - **Ajustes desligados por padrão.** Mandar mensagens, abrir e fechar sessões ficam desligados até você ligar,
   e só dá para ligar pelo painel aberto no próprio Mac (`http://127.0.0.1:7777`). Pelo celular, pelo Tailscale ou
   pela rede, o pedido para mudar os Ajustes é recusado, mesmo com o token. Com eles ligados, quem tiver o link

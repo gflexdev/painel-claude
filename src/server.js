@@ -23,6 +23,8 @@ import { holdPermission, readBody, readHookEvent, sendJson } from './http.js';
 import { createRemoteGate, createRemoteRoutes } from './remote.js';
 import { createScreenTokenCheck } from './tokens.js';
 import { createWatchRoutes } from './watch.js';
+import { ensureVapidKeys, DEVICES_FILE } from './config.js';
+import { createPush, createPushRoutes } from './push.js';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/', import.meta.url));
 const MAX_HOOK_BODY = 8 * 1024 * 1024;
@@ -135,6 +137,10 @@ const log = (line) => process.stdout.write(`[painel] ${new Date().toISOString()}
 const hasToken = createScreenTokenCheck(config.token);
 /** Relógio (ADR 0002): token próprio, que só vale na lista dele. Gerar ou revogar: `node scripts/relogio.js`. */
 const watchRoutes = createWatchRoutes({ store, watchToken: () => config.watch?.token ?? null, hasScreenToken: hasToken });
+
+/** Avisos por Web Push (ADR 0001): chaves VAPID no config.json, inscrições dos aparelhos em aparelhos.json. */
+const push = createPush({ file: DEVICES_FILE, vapid: ensureVapidKeys(), subject: config.vapid?.subject, log, onError: logError });
+const pushRoutes = createPushRoutes({ push, hasToken });
 
 const actions = createActionRoutes({
   store,
@@ -291,6 +297,7 @@ async function route(req, res) {
   if (req.method === 'POST' && pathname === '/permission') return handlePermissionHook(req, res);
   if (await remoteRoutes.handle(req, res, pathname)) return undefined;
   if (watchRoutes.handle(req, res, url)) return undefined;
+  if (await pushRoutes.handle(req, res, url)) return undefined;
   if (await actions.handle(req, res, url)) return undefined;
   const decisionRoute = pathname.match(/^\/api\/permissions\/([\w-]{1,80})$/);
   const seenRoute = pathname.match(/^\/api\/sessions\/([\w-]{1,80})\/seen$/);

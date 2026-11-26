@@ -23,6 +23,7 @@ Sessões do Claude Code ──hooks──▶ servidor no Mac (127.0.0.1:7777) �
 | `src/panel-data.js` | O que é só do painel: arquivadas e sessões abertas por ele (`painel.json`). |
 | `src/actions.js` | Rotas de ação: arquivar, Ajustes, mensagem, abrir, fechar e apagar. |
 | `src/chat.js`, `src/control.js` | Fila das mensagens para as sessões; `claude --bg`, `stop` e `rm`. |
+| `src/webpush.js`, `src/push.js` | Avisos por Web Push: VAPID e criptografia do payload com `node:crypto`; inscrições dos aparelhos e envio. |
 | `hooks/` | Scripts que o Claude Code chama: `enviar-evento.sh`, `permissao.sh`, `esperar-mensagem.sh`, `statusline.sh`, `enviar-uso.sh`. |
 | `public/` | O painel web (PWA): quadros, grade, mapa, detalhe, Ajustes, barra de uso, estilos de personagem. |
 | `scripts/` | Instalação no Mac e na VPS, ícones e empacotamento. |
@@ -135,6 +136,10 @@ porque o `EventSource` não manda cabeçalho.
 | `POST /chat/wait` | entrada do hook do chat; só do próprio Mac |
 | `POST /hook`, `POST /permission`, `POST /usage` | entrada dos hooks e da status line; só do próprio Mac |
 | `POST /remote/hook`, `/remote/permission`, `/remote/transcript` | entrada das outras máquinas (veja abaixo) |
+| `GET /api/push/key` | `{ publicKey, devices }`: a chave pública VAPID, para o navegador se inscrever. Token **só no cabeçalho** |
+| `POST /api/push/subscribe` | o `PushSubscription.toJSON()` do navegador. Registra o aparelho (o mesmo endpoint não duplica). 400 se a inscrição não vale. Token **só no cabeçalho** |
+| `POST /api/push/unsubscribe` | `{ endpoint }`. Tira o aparelho da lista. Token **só no cabeçalho** |
+| `POST /api/push/test` | manda o Aviso de teste a todos os aparelhos e espera: `{ sent, removed, failed, devices }`. Token **só no cabeçalho** |
 | `GET /api/watch` | lista do relógio: `{ sessions, total, counts, usage? }` (veja abaixo). Token do relógio **ou** das Telas, **só no cabeçalho** |
 | `GET /health` | contagem de sessões, sem token |
 
@@ -293,10 +298,41 @@ aberto.
   `DNSName` do `tailscale status`, ou `PAINEL_URL`) e o token em `relogio/gerado/Segredos.mc`, fora do git. O
   token nunca aparece na tela. Não são *properties*, porque o simulador guarda as da primeira execução.
 
+## Avisos (Web Push)
+
+O **Aviso** (veja o [GLOSSARY.md](../GLOSSARY.md)) sai do painel como Web Push para cada aparelho que deu licença, e
+o Garmin Connect o repete no relógio (ADR 0001). Tudo com `node:crypto`, sem dependência nova:
+
+- **`src/webpush.js`** (puro): chaves VAPID P-256, o JWT VAPID com ES256 (RFC 8292, `aud` = origem do serviço de
+  push, `exp` em 12 h, `sub` = contato do painel) e a criptografia do payload para o aparelho (RFC 8291, conteúdo
+  `aes128gcm` da RFC 8188, um registro de 4096 bytes). Os testes conferem byte a byte o exemplo da RFC 8291 e
+  verificam o JWT com a chave pública.
+- **Chaves VAPID**: geradas na primeira partida e guardadas em `config.json` como `vapid: { publicKey, privateKey }`
+  (modo 600). `vapid.subject` troca o contato que vai no JWT (padrão: o endereço do repositório). Trocar as chaves
+  invalida as inscrições: cada aparelho pede a licença de novo.
+- **Inscrições** (`src/push.js`): ficam em `aparelhos.json` (modo 600), até 20, sem duplicar o endpoint. Só aceita
+  endpoint `https` dos serviços de push dos navegadores (`fcm.googleapis.com`, `*.push.services.mozilla.com`,
+  `*.notify.windows.com`, `*.push.apple.com`), para o painel não fazer POST a qualquer endereço.
+- **Envio**: o mesmo Aviso vai a todos os aparelhos, com `Urgency: high` e `TTL: 600`. Resposta 404 ou 410 apaga a
+  inscrição (app desinstalado, licença retirada). Outros erros vão para o log só com o host do serviço e o motivo,
+  nunca o conteúdo do Aviso nem o endpoint (que é um segredo do aparelho). `push.notify(aviso)` manda sem esperar,
+  para a ingestão de eventos não parar; `push.send(aviso)` devolve `{ sent, removed, failed, devices }`.
+- **Payload** (JSON, até ~3,9 kB): `{ status, name?, project?, machine?, sessionId? }`, com `status` = `done` |
+  `error` | `waiting` | `background` | `test`. Nunca o comando, o pedido, o detalhe do tile nem trecho de resposta,
+  porque aparece na tela bloqueada e no relógio.
+- **Service worker** (`public/sw.js`): no `push`, mostra a notificação ("Terminou · nome", com o projeto e a
+  máquina embaixo) com a etiqueta `sessao-<id>`, para o Aviso novo da mesma sessão substituir o anterior e vibrar
+  de novo. O toque abre o painel (ou foca o que já está aberto) no detalhe da sessão, pelo `#sessao=<id>`.
+- **Ajustes → Neste aparelho** (`public/push-settings.js`): a linha "Avisos neste aparelho" mostra o estado
+  (recebendo, desligado, bloqueado, sem suporte), pede a licença com um toque, inscreve o aparelho e manda o Aviso
+  de teste. Vale por aparelho, por isso funciona também no celular (as chaves de cima continuam só do Mac). Ao abrir
+  o painel com a licença dada, ele se reinscreve em silêncio, caso o servidor tenha apagado a inscrição ou o
+  navegador a tenha trocado.
+
 ## Instalar como app (PWA)
 
 O painel tem manifest, ícones (192, 512 e maskable), ícone da Apple e um service worker. O service worker não
-guarda estado: só mostra a tela "Sem conexão com o Mac" quando o Mac não responde. O Android e o iPhone só
+guarda estado: mostra a tela "Sem conexão com o Mac" quando o Mac não responde e recebe os Avisos (veja acima). O Android e o iPhone só
 instalam como app uma página em HTTPS, por isso o `tailscale serve`. No próprio Mac, `http://127.0.0.1` já conta
 como seguro.
 

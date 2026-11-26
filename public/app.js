@@ -10,6 +10,7 @@ import { createGridView } from './grid-view.js';
 import { visibleSessions } from './groups.js';
 import { createTopbar } from './topbar.js';
 import { createSettingsDialog } from './settings-dialog.js';
+import { createPushSettings } from './push-settings.js';
 import { createLauncher } from './session-actions.js';
 import { buildTree } from './orbit.js';
 import { createOrbit } from './orbit-view.js';
@@ -94,6 +95,9 @@ const tiles = createTiles({
 const gridView = createGridView({ grid: ui.grid, ruler: ui.ruler, tiles, onChange: () => render() });
 const topbar = createTopbar({ api, onChange: () => render(), openDetail: (id, session) => detail.open(id, session), onLaunch: () => launcher.open() });
 $('settings-button').addEventListener('click', () => settings.open(snapshot.features));
+/** Avisos neste aparelho (Web Push): vale por aparelho, por isso fica fora das chaves do Mac. */
+const pushSettings = createPushSettings({ api, root: $('settings-push') });
+$('settings-button').addEventListener('click', () => pushSettings.refresh());
 
 function renderMap() {
   orbit ??= createOrbit({
@@ -220,6 +224,10 @@ ui.tokenForm.addEventListener('submit', (event) => {
 /** O service worker só registra em HTTPS (ou localhost); em http:// o app abre normal, sem instalar. */
 if ('serviceWorker' in navigator && window.isSecureContext) {
   navigator.serviceWorker.register('/sw.js').catch(() => { /* sem service worker: segue como página */ });
+  // Toque num Aviso com o app já aberto: o service worker pede para abrir o detalhe da sessão.
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data?.type === 'open-hash' && sessionFromHash(event.data.hash)) location.hash = event.data.hash;
+  });
 }
 
 /** O painel lateral e o mapa começam abaixo da barra do topo, que muda de altura (quebra de linha no celular). */
@@ -236,4 +244,7 @@ new ResizeObserver(() => {
 window.addEventListener('hashchange', openFromHash);
 setInterval(tick, TICK_MS);
 tick();
-if (token) connect(); else askToken();
+if (token) {
+  connect();
+  pushSettings.sync();
+} else askToken();
