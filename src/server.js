@@ -22,7 +22,7 @@ import { isLocalHook } from './network.js';
 import { holdPermission, readBody, readHookEvent, sendJson } from './http.js';
 import { createRemoteGate, createRemoteRoutes } from './remote.js';
 import { createScreenTokenCheck } from './tokens.js';
-import { createWatchRoutes } from './watch.js';
+import { createWatchRoutes, watchOrScreenToken } from './watch.js';
 import { avisoLine, createVigia, createVigiaRoutes } from './vigia.js';
 import { ensureVapidKeys, DEVICES_FILE } from './config.js';
 import { createPush, createPushRoutes, pushAviso } from './push.js';
@@ -149,9 +149,10 @@ const log = (line) => process.stdout.write(`[painel] ${new Date().toISOString()}
 /** Token das Telas: GET aceita o token na URL (EventSource não manda cabeçalho); ações só pelo cabeçalho. */
 const hasToken = createScreenTokenCheck(config.token);
 /** Relógio (ADR 0002): token próprio, que só vale na lista dele. Gerar ou revogar: `node scripts/relogio.js`. */
-const watchRoutes = createWatchRoutes({ store, watchToken: () => config.watch?.token ?? null, hasScreenToken: hasToken });
-/** Vigiar e parar de vigiar: por enquanto só o token das Telas, no cabeçalho (o do relógio fica barrado). */
-const vigiaRoutes = createVigiaRoutes({ vigia, store, allowed: (req, url) => hasToken(req, url, { headerOnly: true }), log });
+const watchToken = () => config.watch?.token ?? null;
+const watchRoutes = createWatchRoutes({ store, watchToken, hasScreenToken: hasToken });
+/** Vigiar e parar de vigiar: o token das Telas ou o do relógio, só no cabeçalho (o relógio só vigia). */
+const vigiaRoutes = createVigiaRoutes({ vigia, store, allowed: watchOrScreenToken(watchToken, hasToken), log });
 
 /** Avisos por Web Push (ADR 0001): chaves VAPID no config.json, inscrições dos aparelhos em aparelhos.json. */
 const push = createPush({ file: DEVICES_FILE, vapid: ensureVapidKeys(), subject: config.vapid?.subject, log, onError: logError });

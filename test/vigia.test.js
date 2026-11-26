@@ -281,12 +281,12 @@ test('rotas: vigiar e parar de vigiar com o token das Telas no cabeçalho', asyn
   }
 });
 
-test('rotas: sem token, token na URL ou token do relógio dão 401', async () => {
+test('rotas: sem token, token na URL ou outro token dão 401', async () => {
   const app = await routes();
   try {
     assert.equal((await app.call('/api/sessions/s1/watch')).status, 401);
     assert.equal((await app.call('/api/sessions/s1/watch', { query: `?t=${SCREEN_TOKEN}` })).status, 401);
-    // O token do relógio vale só na lista dele (por enquanto).
+    // Aqui só o das Telas é conferido; o do relógio, ligado como no server.js, fica em test/watch.test.js.
     assert.equal((await app.call('/api/sessions/s1/watch', { token: WATCH_TOKEN })).status, 401);
     assert.equal((await app.call('/api/sessions/s1/unwatch', { token: WATCH_TOKEN })).status, 401);
     assert.equal(app.vigia.isWatched('s1'), false);

@@ -150,7 +150,7 @@ const WATCH_ROUTE = /^\/api\/sessions\/([\w-]{1,80})\/(watch|unwatch)$/;
  * Rotas de vigiar e parar de vigiar: POST /api/sessions/:id/watch e /unwatch.
  * @param {{ vigia: ReturnType<typeof createVigia>, store: { get: (id: string) => (object | undefined) },
  *   allowed: (req: object, url: URL) => boolean, log?: (line: string) => void }} deps
- *   allowed: confere o token (hoje o das Telas, só no cabeçalho).
+ *   allowed: confere o token (o das Telas ou o do relógio, só no cabeçalho: watchOrScreenToken em watch.js).
  */
 export function createVigiaRoutes({ vigia, store, allowed, log = () => {} }) {
   return {

@@ -3,8 +3,9 @@ import Toybox.Lang;
 import Toybox.WatchUi;
 
 // Detalhe de uma sessão (firmware/src/round/session_view.cpp): o Clawd dela, o contexto no anel e os números.
-// Quem espera você ganha a borda vermelha pulsando e o cartão do pedido, sem botões: o relógio só acompanha.
-// UP/DOWN passa para a sessão vizinha; BACK (ou deslizar para baixo) volta.
+// Quem espera você ganha a borda vermelha pulsando e o cartão do pedido, sem botões: o relógio não aprova nada.
+// START liga ou desliga a vigia (a linha de baixo diz como está); UP/DOWN passa para a sessão vizinha; BACK (ou
+// deslizar para baixo) volta.
 class DetalheView extends WatchUi.View {
 
     private var _controle as Controle;
@@ -57,6 +58,32 @@ class DetalheView extends WatchUi.View {
         } else {
             desenharNumeros(dc, s, cor, pct);
         }
+        desenharVigia(dc, s);
+    }
+
+    // Embaixo de tudo: a marca de vigiada e o que o START faz, ou o erro da última tentativa.
+    private function desenharVigia(dc as Graphics.Dc, s as Sessao) as Void {
+        var cx = dc.getWidth() / 2;
+        var y = Tela.s(dc, 440);
+        var maximo = Tela.s(dc, 220);
+        var erro = _controle.erroVigiaAgora();
+        if (erro != null) {
+            Tela.centro(dc, y, Tela.MONO_PEQ, Cores.ESPERANDO, erro, maximo);
+            return;
+        }
+        var pendente = _controle.vigiaPendente != null && _controle.vigiaPendente.equals(s.id);
+        var rotulo = Palavras.rotuloVigia(s, pendente);
+        if (!s.watched || pendente) {
+            Tela.centro(dc, y, Tela.MONO_PEQ, Cores.TINTA_APAGADA, rotulo, maximo);
+            return;
+        }
+        var r = Tela.s(dc, 7);
+        var vao = Tela.s(dc, 7);
+        var texto = Tela.cortar(dc, rotulo, Tela.MONO_PEQ, maximo - r * 2 - vao);
+        var x = cx - (r * 2 + vao + Tela.largura(dc, texto, Tela.MONO_PEQ)) / 2;
+        Tela.marcaVigia(dc, x + r, y, r, Cores.PRETO);
+        Tela.texto(dc, x + r * 2 + vao, y, Tela.MONO_PEQ, Cores.PERGUNTA, texto,
+            Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 
     // Contexto, pedidos e há quanto tempo está aberta; embaixo, o que está fazendo.
@@ -121,7 +148,21 @@ class DetalheDelegate extends WatchUi.BehaviorDelegate {
         return _controle.moverDetalhe(-1);
     }
 
+    // Como na lista: devolvendo false, o START chega em onKey e o toque em onTap. Só o START vigia; um toque na
+    // tela não faz nada, para não ligar a vigia sem querer.
     function onSelect() as Boolean {
+        return false;
+    }
+
+    function onKey(evento as WatchUi.KeyEvent) as Boolean {
+        if (evento.getKey() != WatchUi.KEY_ENTER) {
+            return false;
+        }
+        _controle.alternarVigia();
+        return true;
+    }
+
+    function onTap(evento as WatchUi.ClickEvent) as Boolean {
         return true;
     }
 

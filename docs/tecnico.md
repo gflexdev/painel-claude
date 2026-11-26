@@ -87,6 +87,7 @@ turno. Com a lista presente e vazia, vale ela: terminou. Quem espera em segundo 
 O dono vigia uma sessão pelo detalhe dela no painel web (`POST /api/sessions/:id/watch` e `/unwatch`). A vigia fica
 em `~/.config/painel-claude/vigia.json` (modo 600, escrita atômica, até 500 ids, só ids `[\w-]{1,80}`) e volta
 depois de reiniciar o painel. É uma só para todas as Telas: a lista das sessões ganha `watched: true`.
+O relógio vigia pelas mesmas rotas, com o token dele (veja [Relógio Garmin](#relógio-garmin-forerunner-165)).
 
 Também dá para vigiar no mesmo toque de mandar um pedido ou abrir uma sessão nova: as duas rotas aceitam
 `vigiar: true` (a caixa "vigiar" dos dois formulários). No pedido, a vigia liga só se a mensagem foi aceita (entregue
@@ -163,7 +164,7 @@ porque o `EventSource` não manda cabeçalho.
 | `POST /api/permissions/:id` | `{ "decision": "allow" \| "deny", "answers"?: { pergunta: opção \| [opções] \| texto } }`. Token **só no cabeçalho**. Responde 410 se o pedido já foi respondido e 400 se faltar resposta |
 | `POST /api/sessions/:id/seen` | tira o "terminou · ver" da sessão |
 | `POST /api/sessions/:id/archive`, `/unarchive` | arquiva ou desarquiva só no painel. Token **só no cabeçalho** |
-| `POST /api/sessions/:id/watch`, `/unwatch` | vigia ou para de vigiar. 200 `{ id, watched }`; 404 se a sessão não existe ou foi encerrada (só em `watch`). Token das Telas **só no cabeçalho**; o do relógio não vale |
+| `POST /api/sessions/:id/watch`, `/unwatch` | vigia ou para de vigiar. 200 `{ id, watched }`; 404 se a sessão não existe ou foi encerrada (só em `watch`). Token das Telas **ou** do relógio, **só no cabeçalho** |
 | `GET /api/settings` | `{ features, canChange }`: `canChange` é `true` só no próprio Mac (loopback sem proxy) |
 | `POST /api/settings` | `{ chat?, launch?, closeRemove? }` (booleanos). Token no cabeçalho **e** do próprio Mac; senão 403 |
 | `POST /api/sessions/:id/message` | `{ text, vigiar? }` (até 4000). Ajuste `chat`. 200 `{ status: delivered \| queued, watched }`; 409 se a sessão ainda não ouve o painel. `vigiar: true` liga a vigia quando a mensagem é aceita |
@@ -321,20 +322,26 @@ aberto.
   não arquivadas nem sem sinal, até 8, na ordem da grade. Leva o que o mostrador redondo mostra, e nada além:
   - em cada sessão: `id`, `name` (até 48 caracteres), `project`, `status` (`waiting` | `error` | `done` |
     `working`, sendo `done` o terminou ainda não visto) e `age` (segundos na Situação); quando houver, `machine`,
-    `activity`, `context` (tokens), `model`, `turns`, `open` (segundos desde que foi aberta) e `ask`
-    (`{ kind, tool?, count }`: o tipo do pedido e o **nome** da ferramenta);
+    `activity`, `context` (tokens), `model`, `turns`, `open` (segundos desde que foi aberta), `ask`
+    (`{ kind, tool?, count }`: o tipo do pedido e o **nome** da ferramenta) e `watched: true` (a **Sessão
+    vigiada**);
   - `total` e `counts` (`waiting`, `working`, `done`, `error`): todas em movimento, não só as 8;
   - `usage`: `fiveHour` e `sevenDay` (`{ percent, resetsIn }`, em segundos) e até 2 limites por modelo.
   Nunca vai o comando, o pedido, o detalhe do tile nem trecho de resposta. O `tool` da grade é a descrição pronta
   ("Bash: npm test") e leva o comando, por isso a grade passou a mandar também o `toolName`, e o relógio só recebe
   esse. Com 8 sessões a resposta tem uns 2 kB, longe dos ~27 kB que o 165 aceita.
 - **O token do relógio** (ADR 0002): fica em `config.json` como `watch.token` (32 bytes, modo 600), separado do
-  token das Telas. Vale só em `/api/watch` e só no cabeçalho; nas outras rotas o servidor confere só o das Telas,
-  então ele recebe 401. O token das Telas também lê a lista. `node scripts/relogio.js token` gera e
+  token das Telas. Vale só em `/api/watch` e em `POST /api/sessions/:id/watch` e `/unwatch`, sempre só no
+  cabeçalho (a conferência é uma só, `watchOrScreenToken` em `src/watch.js`); nas outras rotas o servidor confere
+  só o das Telas, então ele recebe 401. O token das Telas também lê a lista. `node scripts/relogio.js token` gera e
   `node scripts/relogio.js revogar` apaga; os dois reiniciam o serviço, porque o token é lido no início.
 - **Na build**: `relogio/scripts/build.sh` chama `node scripts/relogio.js segredos`, que grava o endereço (o
   `DNSName` do `tailscale status`, ou `PAINEL_URL`) e o token em `relogio/gerado/Segredos.mc`, fora do git. O
   token nunca aparece na tela. Não são *properties*, porque o simulador guarda as da primeira execução.
+- **Vigiar pelo relógio**: no detalhe de uma sessão, o START chama `watch` ou `unwatch` e o relógio vibra curto
+  quando o painel confirma. A marca de vigiada (o ◉, desenhado, porque as fontes do relógio não têm o caractere)
+  aparece no fim do nome nas linhas da lista, embaixo à direita dos Clawds da órbita e na última linha do detalhe.
+  Uma lista pedida antes da confirmação ainda chega sem a mudança; o relógio mantém a confirmada até a próxima.
 
 ## Avisos (Web Push)
 

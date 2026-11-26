@@ -22,6 +22,7 @@ function errosComNome(logger as Logger) as Boolean {
     Test.assertEqual(Erros.mensagem(401, 400)[0], "token inválido");
     Test.assertEqual(Erros.mensagem(-402, 400)[0], "resposta grande");
     Test.assertEqual(Erros.mensagem(-1001, 10)[0], "precisa de https");
+    Test.assertEqual(Erros.mensagem(404, 400)[0], "sessão encerrada");
     Test.assertEqual(Erros.mensagem(500, 400)[0], "erro 500");
     Test.assertEqual(Erros.mensagem(-2, 400)[0], "erro -2");
     return true;

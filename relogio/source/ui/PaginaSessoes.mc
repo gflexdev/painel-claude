@@ -3,7 +3,8 @@ import Toybox.Lang;
 import Toybox.System;
 
 // Sessões (firmware/src/round/pages.cpp, ListPage): uma linha por sessão em movimento, com o Clawd, o ícone da
-// atividade, a palavra do tile e o tempo na situação. UP/DOWN anda pela lista; START ou tocar abre a sessão.
+// atividade, a palavra do tile e o tempo na situação; a Sessão vigiada leva o ◉ no fim do nome.
+// UP/DOWN anda pela lista; START ou tocar abre a sessão.
 module PaginaSessoes {
 
     // Medidas do mostrador (466 px).
@@ -86,8 +87,15 @@ module PaginaSessoes {
         var direita = x + w - Tela.s(dc, 18);
         var esquerda = Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER;
         var nome = s.name.equals("") ? s.id.substring(0, 8) as String : s.name;
-        Tela.texto(dc, texto, meio - Tela.s(dc, 12), Tela.DISP_PEQ, Cores.TINTA,
-            Tela.cortar(dc, nome, Tela.DISP_PEQ, direita - texto), esquerda);
+        var linhaDeCima = meio - Tela.s(dc, 12);
+        var fimDoNome = direita;
+        if (s.watched) {
+            var r = Tela.s(dc, 7);
+            Tela.marcaVigia(dc, direita - r, linhaDeCima, r, fundo);
+            fimDoNome = direita - r * 2 - Tela.s(dc, 8);
+        }
+        Tela.texto(dc, texto, linhaDeCima, Tela.DISP_PEQ, Cores.TINTA,
+            Tela.cortar(dc, nome, Tela.DISP_PEQ, fimDoNome - texto), esquerda);
         var tempo = Palavras.decorrido(s.age);
         var linhaDeBaixo = meio + Tela.s(dc, 14);
         Tela.texto(dc, direita, linhaDeBaixo, Tela.MONO_PEQ, Cores.TINTA_APAGADA, tempo,

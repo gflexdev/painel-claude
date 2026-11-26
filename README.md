@@ -254,7 +254,7 @@ O Tailscale cria uma rede privada entre os seus aparelhos. O painel continua vis
   e só dá para ligar pelo painel aberto no próprio Mac (`http://127.0.0.1:7777`). Pelo celular, pelo Tailscale ou
   pela rede, o pedido para mudar os Ajustes é recusado, mesmo com o token. Com eles ligados, quem tiver o link
   também pode mandar pedidos às suas sessões.
-- **O relógio tem token próprio**, que só lê a lista do relógio. Se o relógio se perder, rode
+- **O relógio tem token próprio**, que só lê a lista do relógio e liga ou desliga a vigia. Se o relógio se perder, rode
   `node scripts/relogio.js revogar`: ele para de funcionar e o token das outras telas continua o mesmo.
 - Para trocar o token (se ele vazar): apague a linha `"token"` de `~/.config/painel-claude/config.json` e rode
   `bash instalar.sh` de novo. Ele gera outro, e os aparelhos vão pedir o link novo.
@@ -366,9 +366,10 @@ compilar à mão, rode `bash widget-mac/instalar.sh` e depois adicione pela gale
 ## Relógio Garmin (opcional)
 
 Um app para o Forerunner 165 com a cara do mostrador redondo: o Mapa com o Clawd, a lista das sessões em
-movimento, o uso do plano e o detalhe de cada sessão. Vibra e abre a sessão quando ela passa a esperar você. Ele
-só acompanha: não aprova nem manda nada. Pede o Tailscale ligado no celular e é instalado pelo cabo, com um token próprio que
-só lê essa lista. Rode `relogio/scripts/instalar.sh`. Detalhes em [relogio/README.md](relogio/README.md).
+movimento, o uso do plano e o detalhe de cada sessão. Vibra e abre a sessão quando ela passa a esperar você. No
+detalhe, o START vigia a sessão (ou para de vigiar). Ele só vigia: não aprova, não responde nem manda pedidos. Pede
+o Tailscale ligado no celular e é instalado pelo cabo, com um token próprio que só lê essa lista e liga ou desliga a
+vigia. Rode `relogio/scripts/instalar.sh`. Detalhes em [relogio/README.md](relogio/README.md).
 
 ## Sessões de um servidor (avançado)
 

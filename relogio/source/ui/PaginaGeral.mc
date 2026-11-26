@@ -4,8 +4,8 @@ import Toybox.Math;
 import Toybox.System;
 
 // Visão geral (firmware/src/round/pages.cpp, OverviewPage): o Mapa em órbita, com um Clawd por sessão em
-// movimento (até 8) e o Clawd grande no meio, na situação mais urgente. Tocar num Clawd da órbita abre a
-// sessão; tocar no do meio faz ele pular com um coração.
+// movimento (até 8) e o Clawd grande no meio, na situação mais urgente. A Sessão vigiada leva o ◉ embaixo, à
+// direita do Clawd. Tocar num Clawd da órbita abre a sessão; tocar no do meio faz ele pular com um coração.
 module PaginaGeral {
 
     // Medidas do mostrador (466 px).
@@ -80,6 +80,15 @@ module PaginaGeral {
             dc.setColor(Cores.ESPERANDO, Graphics.COLOR_TRANSPARENT);
             dc.fillCircle(sx, sy, selo);
             Tela.texto(dc, sx, sy, Tela.MONO_PEQ, Cores.SELO_TINTA, "!", Tela.JUSTO_CENTRO);
+        }
+        if (sessao.watched) {
+            // Embaixo, à direita (o "!" de quem espera fica em cima), com uma borda preta para soltar do círculo.
+            var marca = Tela.s(dc, 8);
+            var mx = x + r - Tela.s(dc, 5);
+            var my = y + r - Tela.s(dc, 5);
+            dc.setColor(Cores.PRETO, Graphics.COLOR_TRANSPARENT);
+            dc.fillCircle(mx, my, marca + 2);
+            Tela.marcaVigia(dc, mx, my, marca, Cores.PRETO);
         }
     }
 

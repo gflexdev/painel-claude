@@ -12,8 +12,9 @@ module Exemplo {
                         "activity" => "bash", "ask" => {"kind" => "permission", "tool" => "Bash", "count" => 2}},
                     {"id" => "b2", "name" => "Deploy", "project" => "melibee", "status" => "error", "age" => 7200, "machine" => "vps-dev"},
                     {"id" => "c3", "name" => "Refatorar", "project" => "bancada", "status" => "done", "age" => 5, "context" => 841483,
-                        "model" => "opus 5.5", "turns" => 19, "open" => 90000},
-                    {"id" => "d4", "name" => "Testes", "project" => "", "status" => "working", "age" => 200000, "activity" => "write"}
+                        "model" => "opus 5.5", "turns" => 19, "open" => 90000, "watched" => true},
+                    {"id" => "d4", "name" => "Testes", "project" => "", "status" => "working", "age" => 200000, "activity" => "write",
+                        "watched" => "sim"}
                 ],
                 "total" => 9,
                 "counts" => {"waiting" => 1, "working" => 6, "done" => 1, "error" => 1},
@@ -105,5 +106,27 @@ function achaSessaoPeloId(logger as Logger) as Boolean {
     Test.assertEqual(p.posicaoDe(null), -1);
     Test.assertEqual(p.sessaoDe("b2").name, "Deploy");
     Test.assertEqual(p.maisUrgente().id, "a1");
+    return true;
+}
+
+(:test)
+function marcaDeVigiadaNasLinhas(logger as Logger) as Boolean {
+    var p = Leitura.ler(Exemplo.resposta());
+    // Só a que vem com watched: true leva a marca; sem o campo, ou com outro valor, não.
+    Test.assert(!p.sessoes[0].watched);
+    Test.assert(!p.sessoes[1].watched);
+    Test.assert(p.sessoes[2].watched);
+    Test.assert(!p.sessoes[3].watched);
+    // O START no detalhe: a resposta do painel diz como ficou, e a marca muda só naquela linha.
+    Test.assertEqual(Leitura.vigiada({"success" => true, "data" => {"id" => "a1", "watched" => true}}), true);
+    Test.assertEqual(Leitura.vigiada({"success" => true, "data" => {"id" => "c3", "watched" => false}}), false);
+    Test.assert(Leitura.vigiada({"success" => true, "data" => {"id" => "a1"}}) == null);
+    Test.assert(Leitura.vigiada("x") == null);
+    Test.assert(p.fixarVigia("a1", true));
+    Test.assert(p.sessoes[0].watched);
+    Test.assert(p.fixarVigia("c3", false));
+    Test.assert(!p.sessoes[2].watched);
+    Test.assert(!p.sessoes[1].watched);
+    Test.assert(!p.fixarVigia("sumiu", true));
     return true;
 }

@@ -9,6 +9,8 @@ class Sessao {
     var status as String;
     var age as Number;
     var machine as String = "";
+    // Sessão vigiada: o painel manda Aviso quando ela chegar a terminou, esperando você ou erro.
+    var watched as Boolean = false;
     var activity as String = "";
     // Pedido que segura a sessão: "permission" | "plan" | "question" ("" = nenhum), a ferramenta e quantos há.
     var askKind as String = "";
