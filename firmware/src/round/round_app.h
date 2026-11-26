@@ -23,6 +23,8 @@ struct RoundOptions {
   WakeOptions wake;
   /** Mac sem resposta por mais que isso: troca tudo pela tela "Mac sem resposta". */
   int64_t offlineScreenAfterMs = 45000;
+  /** Depois de um pedido respondido (aqui, no Mac ou no celular), sem toque por isso: volta à Visão geral. */
+  int64_t homeAfterAnswerMs = 30000;
 };
 
 class RoundApp {
@@ -41,6 +43,7 @@ class RoundApp {
   void renderPager();
   void openSession(const std::string& id);
   void openNextWaiting(const std::string& except);
+  void goHomeWhenIdle(int64_t now);
   int64_t serverNow() const;
   bool busy() const;
   static void onTileChanged(lv_event_t* e);
@@ -72,6 +75,8 @@ class RoundApp {
   int64_t startedMono_ = 0;
   int64_t offlineSince_ = 0;
   int64_t lastSecond_ = 0;
+  /** Quando o pedido aberto foi respondido (0 = nada para voltar). */
+  int64_t answeredAt_ = 0;
 };
 
 }  // namespace painel::round

@@ -170,8 +170,11 @@ void SessionView::create(lv_obj_t* screen) {
 }
 
 const Request* SessionView::request() const {
-  if (!detail_ || detail_->requests.empty()) return nullptr;
-  return &detail_->requests.front();
+  if (!detail_) return nullptr;
+  for (const Request& r : detail_->requests) {
+    if (r.id != answeredId_) return &r;
+  }
+  return nullptr;
 }
 
 void SessionView::open(const Session& session) {
@@ -181,6 +184,8 @@ void SessionView::open(const Session& session) {
   if (!same) {
     detail_.reset();
     busy_ = false;
+    answeredId_.clear();
+    answered_ = false;
     toastUntil_ = 0;
     show(toast_, false);
   }
@@ -213,9 +218,14 @@ void SessionView::onSnapshot(const Snapshot& snapshot) {
     close();
     return;
   }
-  const bool waitingChanged = (it->status == "waiting") != (session_.status == "waiting");
+  // O pedido sumiu sem sair de "esperando": foi respondido em algum lugar. Pedido novo volta a perguntar.
+  const bool newRequest = it->hasPermission && it->permission.id != session_.permission.id;
+  const bool wasWaiting = session_.status == "waiting";
+  const bool isWaiting = it->status == "waiting";
+  if ((session_.hasPermission && !it->hasPermission) || (wasWaiting && !isWaiting)) answered_ = true;
+  if ((newRequest && it->permission.id != answeredId_) || (!wasWaiting && isWaiting)) answered_ = false;
   session_ = *it;
-  if (waitingChanged) client_.requestDetail(openId_);
+  if (wasWaiting != isWaiting || newRequest) client_.requestDetail(openId_);
   render();
 }
 
@@ -239,8 +249,13 @@ void SessionView::decide(bool allow) {
 
 void SessionView::onDecision(const ClientEvent& ev) {
   busy_ = false;
+  const Request* answered = request();
+  const bool plan = answered && answered->kind == "plan";
+  if ((ev.status == 200 || ev.status == 410) && answered) {
+    answeredId_ = answered->id;
+    answered_ = true;
+  }
   if (ev.status == 200) {
-    const bool plan = request() && request()->kind == "plan";
     const std::string word = ev.allow ? (plan ? "Plano aprovado" : "Permitido") : (plan ? "Plano recusado" : "Negado");
     showToast(word, ev.allow ? color::kIdle : 0x2a2e38, ev.allow ? color::kAllowInk : color::kInk, true);
   } else if (ev.status == 410) {
@@ -292,7 +307,12 @@ void SessionView::setEdge(bool on) {
 
 void SessionView::render() {
   if (!isOpen()) return;
-  const Session& s = session_;
+  Session shown = session_;
+  if (answered_ && shown.status == "waiting") {
+    shown.status = "working";  // respondido: o Claude segue (ou roda a ferramenta) até o próximo hook
+    shown.hasPermission = false;
+  }
+  const Session& s = shown;
   const int64_t now = serverNow_();
   const uint32_t c = statusColor(s);
   const bool waiting = s.status == "waiting";
