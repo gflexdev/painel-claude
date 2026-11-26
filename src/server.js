@@ -169,6 +169,7 @@ const actions = createActionRoutes({
       return features;
     },
   },
+  vigia,
   isLoopback,
   hasToken,
   logError,

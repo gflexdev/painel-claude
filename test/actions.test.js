@@ -10,12 +10,13 @@ import { createPanelData } from '../src/panel-data.js';
 import { normalizeFeatures } from '../src/config.js';
 import { isLocalHook } from '../src/network.js';
 import { sendJson } from '../src/http.js';
+import { createVigia } from '../src/vigia.js';
 
 const TOKEN = 'token-de-teste';
 const PROJECT = mkdtempSync(join(tmpdir(), 'painel-acoes-'));
 
 /** Servidor de verdade com as rotas de ação e dependências falsas; devolve o que cada uma recebeu. */
-async function setup({ features = {}, agents = [] } = {}) {
+async function setup({ features = {}, agents = [], refreshes = null } = {}) {
   let current = normalizeFeatures(features);
   const calls = [];
   const ended = [];
@@ -38,7 +39,11 @@ async function setup({ features = {}, agents = [] } = {}) {
     stopJob: async (id) => { calls.push(['stop', id]); },
     removeJob: async (id) => { calls.push(['rm', id]); },
   };
-  const discovery = { latest: () => agents, refresh: async () => agents };
+  // refreshes: o que o `claude agents` devolve a cada consulta (a sessão nova demora a aparecer); depois, `agents`.
+  const pending = refreshes ? [...refreshes] : [];
+  const discovery = { latest: () => agents, refresh: async () => (pending.length ? pending.shift() : agents) };
+  const vigia = createVigia({ file: join(mkdtempSync(join(tmpdir(), 'painel-acoes-vigia-')), 'vigia.json') });
+  const linked = [];
   const actions = createActionRoutes({
     store,
     chat,
@@ -48,8 +53,10 @@ async function setup({ features = {}, agents = [] } = {}) {
     features: { get: () => current, set: (next) => { current = normalizeFeatures(next); chat.setEnabled(current.chat); return current; } },
     isLoopback: (req) => isLocalHook(req.socket.remoteAddress ?? '', req.headers),
     hasToken: (req) => req.headers.authorization === `Bearer ${TOKEN}`,
+    vigia,
     logError: () => {},
     log: () => {},
+    link: { tries: 3, everyMs: 5, onDone: (result) => linked.push(result) },
   });
   const server = createServer((req, res) => {
     const url = new URL(req.url, 'http://x');
@@ -66,7 +73,10 @@ async function setup({ features = {}, agents = [] } = {}) {
     return { status: response.status, body: response.status === 204 ? null : await response.json().catch(() => null) };
   };
   const close = () => new Promise((resolve) => { server.closeAllConnections?.(); server.close(resolve); });
-  return { post, close, calls, ended, panel, chat, base, features: () => current };
+  const linkDone = async (count = 1) => {
+    while (linked.length < count) await new Promise((resolve) => { setTimeout(resolve, 5); });
+  };
+  return { post, close, calls, ended, panel, chat, vigia, linkDone, base, features: () => current };
 }
 
 test('Ajustes: só muda do próprio Mac e com token; pelo proxy (celular) é recusado', async () => {
@@ -202,4 +212,79 @@ test('knownProjects: pastas das sessões deste Mac, worktree vira o repositório
     { cwd: '/srv/x', machine: 'vps' },
   ]);
   assert.deepEqual(projects, [{ path: '/u/dev/api', name: 'api' }, { path: '/u/dev/site', name: 'site' }]);
+});
+
+/** Deixa o hook do chat de s1 esperando, para a próxima mensagem ser entregue. */
+async function listening(app) {
+  const waiting = fetch(`${app.base}/chat/wait`, { method: 'POST', body: JSON.stringify({ session_id: 's1', hook_event_name: 'Stop' }) });
+  await new Promise((resolve) => { setTimeout(resolve, 100); });
+  return waiting;
+}
+
+test('pedido com "vigiar" liga a vigia da sessão; sem "vigiar" não liga', async () => {
+  const app = await setup({ features: { chat: true } });
+  try {
+    let waiting = listening(app);
+    const plain = await app.post('/api/sessions/s1/message', { text: 'roda os testes' });
+    assert.equal(plain.status, 200);
+    assert.equal(plain.body.data.watched, false);
+    assert.equal(app.vigia.isWatched('s1'), false);
+    await waiting;
+    waiting = listening(app);
+    const watched = await app.post('/api/sessions/s1/message', { text: 'agora o build', vigiar: true });
+    assert.equal(watched.status, 200);
+    assert.equal(watched.body.data.watched, true);
+    assert.equal(app.vigia.isWatched('s1'), true);
+    await waiting;
+  } finally {
+    await app.close();
+  }
+});
+
+test('pedido com "vigiar" que não chega à sessão não liga a vigia', async () => {
+  const app = await setup({ features: { chat: true } });
+  try {
+    assert.equal((await app.post('/api/sessions/s1/message', { text: 'oi', vigiar: true })).status, 409);
+    assert.equal((await app.post('/api/sessions/s1/message', { text: '', vigiar: true })).status, 400);
+    assert.equal(app.vigia.isWatched('s1'), false);
+  } finally {
+    await app.close();
+  }
+});
+
+test('sessão nova com "vigiar" liga a vigia quando o id dela aparece', async () => {
+  const agents = [{ sessionId: 'nova-1', kind: 'background', jobId: 'abcd1234' }];
+  const app = await setup({ features: { launch: true }, refreshes: [[]], agents });
+  try {
+    const opened = await app.post('/api/sessions', { cwd: PROJECT, prompt: 'x', vigiar: true });
+    assert.equal(opened.status, 200);
+    assert.equal(app.vigia.isWatched('nova-1'), false);
+    await app.linkDone();
+    assert.equal(app.vigia.isWatched('nova-1'), true);
+    assert.equal(app.panel.jobOf('nova-1'), 'abcd1234');
+  } finally {
+    await app.close();
+  }
+});
+
+test('sessão nova sem "vigiar" não é vigiada; se o id nunca aparece, nada fica vigiado', async () => {
+  const agents = [{ sessionId: 'nova-1', kind: 'background', jobId: 'abcd1234' }];
+  const plain = await setup({ features: { launch: true }, agents });
+  try {
+    assert.equal((await plain.post('/api/sessions', { cwd: PROJECT, prompt: 'x' })).status, 200);
+    await plain.linkDone();
+    assert.equal(plain.panel.jobOf('nova-1'), 'abcd1234');
+    assert.equal(plain.vigia.isWatched('nova-1'), false);
+  } finally {
+    await plain.close();
+  }
+  const lost = await setup({ features: { launch: true }, agents: [{ sessionId: 'outra', kind: 'background', jobId: 'ffff0000' }] });
+  try {
+    assert.equal((await lost.post('/api/sessions', { cwd: PROJECT, prompt: 'x', vigiar: true })).status, 200);
+    await lost.linkDone();
+    assert.equal(lost.vigia.isWatched('outra'), false);
+    assert.equal(lost.panel.jobOf('outra'), null);
+  } finally {
+    await lost.close();
+  }
 });

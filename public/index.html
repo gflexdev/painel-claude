@@ -161,6 +161,7 @@
             <textarea id="chat-text" class="chat-text" rows="2" maxlength="4000" placeholder="Escreva para esta sessão…"></textarea>
             <button id="chat-send" class="chat-send" type="submit" disabled>Enviar</button>
           </div>
+          <label id="chat-watch-row" class="watch-check"><input id="chat-watch" type="checkbox"> vigiar: Aviso quando ela terminar, der erro ou esperar você</label>
           <p id="chat-note" class="chat-note" role="status"></p>
         </form>
       </section>
@@ -186,6 +187,7 @@
         <label class="launch-field">O que esta sessão deve fazer?
           <textarea id="launch-prompt" class="launch-input" rows="4" maxlength="4000"></textarea>
         </label>
+        <label class="watch-check"><input id="launch-watch" type="checkbox"> vigiar: Aviso quando ela terminar, der erro ou esperar você</label>
         <button id="launch-submit" class="launch-submit" type="submit" disabled>Abrir sessão</button>
         <p id="launch-feedback" class="act-note" role="status"></p>
       </form>

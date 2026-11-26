@@ -31,7 +31,10 @@ function confirmable(button, label, confirmLabel, action) {
   return disarm;
 }
 
-/** Janela "Nova sessão": projeto, nome e pedido. Com `parent`, abre como filha na pasta da mãe. */
+/**
+ * Janela "Nova sessão": projeto, nome, pedido e "vigiar". Com `parent`, abre como filha na pasta da mãe. A vigia
+ * liga quando o painel acha o id da sessão nova (alguns segundos depois).
+ */
 export function createLauncher({ api }) {
   const dialog = $('launch');
   const form = $('launch-form');
@@ -39,6 +42,7 @@ export function createLauncher({ api }) {
   const projectRow = $('launch-project-row');
   const name = $('launch-name');
   const prompt = $('launch-prompt');
+  const watch = $('launch-watch');
   const submit = $('launch-submit');
   const feedback = $('launch-feedback');
   let parent = null;
@@ -88,9 +92,11 @@ export function createLauncher({ api }) {
         prompt: prompt.value,
         name: name.value,
         ...(parent ? { parentId: parent.id } : { cwd: project.value }),
+        ...(watch.checked && { vigiar: true }),
       });
       prompt.value = '';
       name.value = '';
+      watch.checked = false;
       feedback.textContent = '';
       dialog.close();
     } catch (error) {

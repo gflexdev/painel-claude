@@ -1,5 +1,6 @@
 // Rotas que agem nas sessões: arquivar no painel (sempre), Ajustes e as ações do grupo 2 (mensagem, abrir,
-// fechar e apagar), cada uma atrás do seu ajuste, desligado por padrão. Todas pedem o token no cabeçalho;
+// fechar e apagar), cada uma atrás do seu ajuste, desligado por padrão. Mandar mensagem e abrir sessão aceitam
+// `vigiar: true`: a vigia liga junto, sem um segundo toque (na sessão nova, quando o id dela aparece). Todas pedem o token no cabeçalho;
 // mudar os Ajustes pede também que o pedido venha do próprio Mac. /chat/wait é a entrada do hook do chat:
 // só do próprio Mac e sem token, como /hook e /permission.
 import { projectOf, projectRoot } from './state.js';
@@ -41,12 +42,17 @@ async function readJson(req, res) {
   return null;
 }
 
+/** O dono marcou "vigiar" no formulário: só o booleano verdadeiro conta. */
+const wantsWatch = (body) => body.vigiar === true;
+
 /**
- * @param {object} deps store, chat, panel, control, discovery, features ({ get, set }), isLoopback(req),
- *   hasToken(req, url, opts), logError(context, error), log(line)
+ * @param {object} deps store, chat, panel, control, discovery, features ({ get, set }), vigia ({ watch, isWatched }),
+ *   isLoopback(req), hasToken(req, url, opts), logError(context, error), log(line) e, só nos testes,
+ *   link ({ tries, everyMs, onDone(sessionId | null) }) para não esperar meio minuto pela sessão nova
  */
 export function createActionRoutes(deps) {
-  const { store, chat, panel, control, discovery, features, isLoopback, hasToken, logError, log } = deps;
+  const { store, chat, panel, control, discovery, features, vigia, isLoopback, hasToken, logError, log } = deps;
+  const { tries = LINK_TRIES, everyMs = LINK_EVERY_MS, onDone = () => {} } = deps.link ?? {};
   const isOn = (key) => features.get()[key] === true;
   const forbidden = (res) => sendJson(res, 403, { success: false, error: OFF });
 
@@ -112,17 +118,25 @@ export function createActionRoutes(deps) {
     if (CHAT_ERRORS[status]) return sendJson(res, status === 'off' ? 403 : 409, { success: false, error: CHAT_ERRORS[status] });
     store.noteChat(id, text);
     log(`mensagem pelo painel (${text.length} caracteres): ${status}`);
-    return sendJson(res, 200, { success: true, data: { status } });
+    if (wantsWatch(body) && vigia.watch(id)) log(`vigia ligada com a mensagem: ${id.slice(0, 8)}`);
+    return sendJson(res, 200, { success: true, data: { status, watched: vigia.isWatched(id) } });
   }
 
-  /** A sessão nova leva uns segundos para aparecer no `claude agents`; aí o painel liga o id dela ao id curto. */
-  async function linkLaunched(jobId, parentId) {
-    for (let attempt = 0; attempt < LINK_TRIES; attempt += 1) {
-      await new Promise((resolve) => { setTimeout(resolve, LINK_EVERY_MS); });
+  /**
+   * A sessão nova leva uns segundos para aparecer no `claude agents`; aí o painel liga o id dela ao id curto e,
+   * se o dono marcou "vigiar", liga a vigia. Se o id nunca aparece, nada fica vigiado. Devolve o id, ou null.
+   */
+  async function linkLaunched(jobId, parentId, watch) {
+    for (let attempt = 0; attempt < tries; attempt += 1) {
+      await new Promise((resolve) => { setTimeout(resolve, everyMs); });
       const entry = ((await discovery.refresh()) ?? discovery.latest()).find((a) => a.jobId === jobId);
-      if (entry) return panel.adopt(entry.sessionId, { jobId, parentId });
+      if (entry && panel.adopt(entry.sessionId, { jobId, parentId })) {
+        if (watch && vigia.watch(entry.sessionId)) log(`vigia ligada na sessão nova: ${entry.sessionId.slice(0, 8)}`);
+        return entry.sessionId;
+      }
     }
-    return logError('sessão nova', `não achei a sessão ${jobId} no claude agents`);
+    logError('sessão nova', `não achei a sessão ${jobId} no claude agents${watch ? ' (ficou sem vigia)' : ''}`);
+    return null;
   }
 
   async function handleLaunch(req, res) {
@@ -138,9 +152,12 @@ export function createActionRoutes(deps) {
     }
     try {
       const { jobId } = await control.launch({ cwd, prompt: body.prompt, name: body.name });
-      linkLaunched(jobId, parentId).catch((error) => logError('sessão nova', error));
-      log(`sessão aberta pelo painel: ${jobId}`);
-      return sendJson(res, 200, { success: true, data: { jobId } });
+      const watch = wantsWatch(body);
+      linkLaunched(jobId, parentId, watch)
+        .catch((error) => { logError('sessão nova', error); return null; })
+        .then(onDone);
+      log(`sessão aberta pelo painel: ${jobId}${watch ? ' (vigiar quando aparecer)' : ''}`);
+      return sendJson(res, 200, { success: true, data: { jobId, vigiar: watch } });
     } catch (error) {
       return sendJson(res, error.message.startsWith('o claude') || error.message.startsWith('não achei') ? 502 : 400, { success: false, error: error.message });
     }

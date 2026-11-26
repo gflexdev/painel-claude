@@ -89,9 +89,11 @@ Três coisas vão além de aprovar e por isso começam desligadas. Cada uma se l
 só pelo painel aberto no próprio Mac:
 
 - **Mandar mensagens às sessões:** um campo "Mensagem para esta sessão" no detalhe. A sessão recebe a mensagem
-  marcada como vinda do painel, mesmo parada, e o detalhe mostra a conversa pelo painel.
+  marcada como vinda do painel, mesmo parada, e o detalhe mostra a conversa pelo painel. Marque "vigiar" para
+  ligar a vigia junto com a mensagem.
 - **Abrir sessões pelo painel:** o botão **+** no topo abre uma sessão nova em segundo plano num projeto que o
-  painel já conhece; "+ sessão filha" no detalhe abre uma na mesma pasta, ligada à sessão de origem.
+  painel já conhece; "+ sessão filha" no detalhe abre uma na mesma pasta, ligada à sessão de origem. Com
+  "vigiar" marcado, ela já nasce vigiada (a vigia liga quando o painel acha a sessão nova, uns segundos depois).
 - **Fechar e apagar sessões:** só as sessões em segundo plano (abertas pelo painel ou com `claude --bg`).
   Apagar remove também o worktree da sessão e pede um segundo toque.
 

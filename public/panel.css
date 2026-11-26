@@ -143,6 +143,12 @@ body[data-resizing] .tile { animation: none; }
 .act-btn:focus-visible { outline: 2px solid var(--unseen); outline-offset: 2px; }
 .act-note { margin: 8px 0 0; min-height: 1.2em; font-size: 12px; line-height: 1.45; color: var(--ink-dim); overflow-wrap: anywhere; }
 .act-note:empty { min-height: 0; margin: 0; }
+/* "vigiar" junto com a mensagem e com a sessão nova: liga a vigia no mesmo toque. */
+.watch-check { display: flex; gap: 8px; align-items: center; font-size: 11px; line-height: 1.4; color: var(--ink-dim); cursor: pointer; }
+.watch-check[hidden] { display: none; }
+.watch-check input { width: 16px; height: 16px; margin: 0; accent-color: var(--question); flex: none; }
+.watch-check:has(input:checked) { color: var(--question); }
+.watch-check input:focus-visible { outline: 2px solid var(--unseen); outline-offset: 2px; }
 
 /* ---------- janelas: nova sessão, ajustes, arquivadas ---------- */
 .launch-form { display: grid; gap: 12px; }
