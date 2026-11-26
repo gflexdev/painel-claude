@@ -72,6 +72,8 @@
 /* toque para abrir os detalhes: só existe no celular (mobile.css) */
 .usage-more { display: none; }
 .usage-scoped { margin: 8px 0 0; font-size: 12px; color: var(--ink-dim); }
+/* o número por modelo parou de vir: avisa na cor de "precisa de você" */
+.usage-scoped-stale { color: var(--waiting); }
 
 @media (max-width: 560px) {
   .usage { padding: 10px 12px; }

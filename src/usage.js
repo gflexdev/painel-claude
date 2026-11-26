@@ -25,6 +25,12 @@ export function parseRateLimits(payload) {
 }
 
 const WEEK_MS = 7 * 24 * 60 * 60_000;
+/**
+ * O limite por modelo (ex.: Fable) só vem do /usage. Mais velho que isso ele não vai para as telas: um "12%"
+ * de três dias atrás no relógio parece de agora e engana mais que a linha sumir. A consulta roda de 5 em 5 min
+ * com sessão aberta e espera até 1 h depois de falhas; 2 h é já ter perdido mais de uma.
+ */
+export const SCOPED_FRESH_MS = 2 * 60 * 60_000;
 const clampPercent = (value) => Math.min(100, Math.max(0, value));
 
 /** Último reset conhecido, empurrado de período em período até ficar no futuro; null se nunca soube. */
@@ -48,6 +54,8 @@ function readSaved(file, onError) {
 /** Guarda o último uso visto; janela que não vier num envio continua com o último valor. */
 export function createUsage({ file, onChange, onError, now = Date.now }) {
   let current = readSaved(file, onError);
+  /** Por que a consulta ao /usage está falhando (só em memória; some quando ela volta a responder). */
+  let issue = null;
 
   const save = () => {
     try {
@@ -115,6 +123,19 @@ export function createUsage({ file, onChange, onError, now = Date.now }) {
       onChange?.();
       return true;
     },
-    view: () => current,
+    /** Motivo da falha da consulta ao /usage, ou null quando ela volta. */
+    setIssue(text) {
+      const next = text || null;
+      if (next === issue) return;
+      issue = next;
+      onChange?.();
+    },
+    /** O uso para as telas: o limite por modelo velho sai (fica `scopedAt` para dizer desde quando). */
+    view() {
+      if (!current) return issue ? { probeIssue: issue } : current;
+      const withIssue = issue ? { ...current, probeIssue: issue } : current;
+      const stale = current.scoped?.length && !(now() - (current.scopedAt ?? 0) <= SCOPED_FRESH_MS);
+      return stale ? { ...withIssue, scoped: [], scopedStale: true } : withIssue;
+    },
   };
 }

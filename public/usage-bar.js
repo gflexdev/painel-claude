@@ -95,8 +95,14 @@ export function renderUsage(container, usage, now) {
 /**
  * "limite por modelo: Fable 41%". Esse número só vem do /usage; se a última consulta for velha (a semana pode
  * ter vindo depois, do app), diz de quando é, para não parecer que os dois são de agora. Reset passado some.
+ * Velho demais, o servidor nem manda o número (`scopedStale`): a linha diz desde quando falta e por quê.
  */
 function scopedLine(usage, now) {
+  if (usage?.scopedStale) {
+    const since = usage.scopedAt ? ` desde ${whenLabel(usage.scopedAt, now)}` : '';
+    const why = usage.probeIssue ? ` · ${usage.probeIssue}` : '';
+    return [el('p', 'usage-scoped usage-scoped-stale', `limite por modelo: sem dado novo${since}${why}`)];
+  }
   const scoped = (usage?.scoped ?? [])
     .filter((s) => Number.isFinite(s.usedPercentage) && !(s.resetsAt <= now));
   if (!scoped.length) return [];
