@@ -1,0 +1,10 @@
+<fonts>
+    <font id="MonoPeq" filename="MonoPeq.fnt" antialias="true"/>
+    <font id="MonoMed" filename="MonoMed.fnt" antialias="true"/>
+    <font id="MonoForte" filename="MonoForte.fnt" antialias="true"/>
+    <font id="DispPeq" filename="DispPeq.fnt" antialias="true"/>
+    <font id="DispMed" filename="DispMed.fnt" antialias="true"/>
+    <font id="DispGrande" filename="DispGrande.fnt" antialias="true"/>
+    <font id="DispEnorme" filename="DispEnorme.fnt" antialias="true"/>
+    <font id="Numero" filename="Numero.fnt" antialias="true"/>
+</fonts>

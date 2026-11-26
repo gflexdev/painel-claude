@@ -13,6 +13,7 @@ rsync -a \
   --exclude 'docs/ideia-bancada.md' \
   --exclude 'firmware/.pio' --exclude 'firmware/.vscode' --exclude 'firmware/include/secrets.h' \
   --exclude 'firmware/capturas' \
+  --exclude 'relogio/bin' --exclude 'relogio/gerado' \
   --exclude 'widget-mac/build' --exclude 'widget-mac/*.xcodeproj/xcuserdata' \
   ./ "$STAGE/"
 

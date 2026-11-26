@@ -1,0 +1,6 @@
+project.manifest = manifest.xml
+
+# test/ só vale nas builds de teste: o código ali é marcado com (:test).
+# gerado/ guarda o endereço e o token (scripts/relogio.js segredos) e fica fora do git.
+base.sourcePath = source;test;gerado
+base.resourcePath = resources
