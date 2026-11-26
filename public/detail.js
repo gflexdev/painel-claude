@@ -60,7 +60,8 @@ export function createDetail({
     $('detail-bot').replaceChildren(agentSvg(agentStyle(), { id: data.id, name: data.name, project: data.project, accessory: accessoryOf(data) }));
     $('detail-name').textContent = data.name;
     const meta = $('detail-meta');
-    meta.textContent = [data.machine, data.scheduled ? '⏱ tarefa agendada' : '', data.archived ? 'arquivada no painel' : '',
+    meta.textContent = [data.machine, data.watched ? '◉ vigiada' : '', data.scheduled ? '⏱ tarefa agendada' : '',
+      data.archived ? 'arquivada no painel' : '',
       data.background ? 'segundo plano' : '', data.origin, placeOf(data)].filter(Boolean).join(' · ');
     // O caminho inteiro fica no title: na tela, só o projeto e a pasta onde a sessão roda.
     if (data.cwd) meta.title = data.cwd;

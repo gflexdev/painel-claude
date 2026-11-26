@@ -13,8 +13,7 @@ const MAX_BG_SHELLS = 5;
  */
 export function backgroundPatch(event) {
   if (event.hook_event_name !== 'Stop' || event.agent_id || !Array.isArray(event.background_tasks)) return undefined;
-  const running = event.background_tasks
-    .filter((task) => task && typeof task === 'object' && !FINISHED_TASK.test(String(task.status ?? '')));
+  const running = runningTasks(event);
   if (!running.length) return null;
   const [first] = running;
   const what = first.type === 'subagent'
@@ -51,6 +50,26 @@ export function shellsPatch(previous, event) {
     detail: shells.length === 1 ? `em segundo plano: ${shells[0]}` : `aguardando ${shells.length} comandos em segundo plano`,
     awaiting: true,
   };
+}
+
+/** Tarefas do `background_tasks` de um Stop que ainda não acabaram. */
+const runningTasks = (event) => event.background_tasks
+  .filter((task) => task && typeof task === 'object' && !FINISHED_TASK.test(String(task.status ?? '')));
+
+/**
+ * O turno acabou e a sessão ficou rodando só por comandos em segundo plano (um servidor de dev, um build)?
+ * Subagente, workflow ou colega entre as tarefas = não: a sessão vai acordar sozinha.
+ * @param {object} event o evento de hook
+ * @param {object | undefined} session a sessão já com o evento aplicado
+ */
+export function onlyShellsInBackground(event, session) {
+  if (event?.hook_event_name !== 'Stop' || event.agent_id || session?.awaiting !== true) return false;
+  if (Array.isArray(event.background_tasks)) {
+    const running = runningTasks(event);
+    return running.length > 0 && running.every((task) => task.type === 'shell');
+  }
+  // Sem a lista: shellsPatch (comandos do turno) põe 'bash'; awaitingPatch (subagentes ativos) põe 'delegate'.
+  return session.activity === 'bash';
 }
 
 /** Comandos em segundo plano lançados desde o último Stop; a lista zera a cada Stop da sessão. */

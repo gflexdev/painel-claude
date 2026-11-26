@@ -4,6 +4,13 @@ import { agentSvg } from './agents.js';
 import { fillStrip, stripLabel, subagentChips } from './family-view.js';
 import { ACTIVITY_WORD, STATUS_WORD, accessoryOf, el, elapsed, tokens } from './format.js';
 
+/** Marca de Sessão vigiada no tile (o texto para leitor de tela vai no aria-label do tile). */
+const watchedMark = () => {
+  const mark = el('span', 'watched-mark', '◉');
+  mark.setAttribute('aria-hidden', 'true');
+  return mark;
+};
+
 export function statusWord(session) {
   if (session.permission) {
     if (session.permission.agentType) return `aprovar? · ◇ ${session.permission.agentType}`;
@@ -59,14 +66,17 @@ export function createTiles({ agentStyle, serverNow, onClick }) {
     tile.name.textContent = session.name;
     const projectText = [session.project, session.origin, session.contextTokens ? `${tokens(session.contextTokens)} ctx` : '']
       .filter(Boolean).join(' · ');
-    // Sessão de outra máquina (ex.: vps-dev) leva a marca na frente; a de tarefa agendada, o relógio.
+    // Sessão de outra máquina (ex.: vps-dev) leva a marca na frente; a vigiada, o alvo; a de tarefa agendada, o relógio.
     tile.project.replaceChildren(
       ...(session.machine ? [el('span', 'machine', session.machine), ' '] : []),
+      ...(session.watched ? [watchedMark(), ' '] : []),
       ...(session.scheduled ? [el('span', 'scheduled-mark', '⏱'), ' '] : []),
       projectText,
     );
-    if (session.scheduled) tile.project.title = 'Sessão de uma tarefa agendada do app do Claude';
+    const marks = [session.watched && 'Sessão vigiada: manda Aviso', session.scheduled && 'Sessão de uma tarefa agendada do app do Claude'];
+    if (marks.some(Boolean)) tile.project.title = marks.filter(Boolean).join(' · ');
     else tile.project.removeAttribute('title');
+    tile.button.toggleAttribute('data-watched', session.watched === true);
     tile.button.toggleAttribute('data-remote', Boolean(session.machine));
     tile.detail.textContent = session.stale ? `sem sinal há ${elapsed(session.lastEventAt, serverNow())}` : session.detail;
     tile.lineage.textContent = session.parentId ? `${'↳'.repeat(Math.min(session.depth ?? 1, 3))} sessão filha` : '';
@@ -74,7 +84,7 @@ export function createTiles({ agentStyle, serverNow, onClick }) {
     tile.button.toggleAttribute('data-child', Boolean(session.parentId));
     tile.word.textContent = statusWord(session);
     tile.time.textContent = elapsed(session.since, serverNow());
-    const extra = session.scheduled ? ', tarefa agendada' : '';
+    const extra = `${session.watched ? ', vigiada' : ''}${session.scheduled ? ', tarefa agendada' : ''}`;
     tile.button.setAttribute('aria-label', `${session.name}: ${tile.word.textContent}, ${session.detail}${extra}`);
   }
 

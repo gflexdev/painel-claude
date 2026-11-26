@@ -44,6 +44,7 @@
 #scheduled-button[aria-pressed='true'] { color: #d6d3cc; }
 #scheduled-button[aria-pressed='false'] { color: var(--ink-faint); text-decoration: line-through; }
 .scheduled-mark { color: var(--unseen); }
+.watched-mark { color: var(--question); }
 
 /* ---------- quadros por projeto ---------- */
 .grid[hidden] { display: none; }

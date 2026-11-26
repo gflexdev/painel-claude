@@ -1,5 +1,5 @@
-// Abrir sessão nova (janela "Nova sessão") e a linha de ações do detalhe: + sessão filha, arquivar no painel,
-// fechar e apagar. Cada botão aparece só com o ajuste dele ligado; arquivar vale sempre.
+// Abrir sessão nova (janela "Nova sessão") e a linha de ações do detalhe: vigiar, + sessão filha, arquivar no
+// painel, fechar e apagar. Cada botão aparece só com o ajuste dele ligado; vigiar e arquivar valem sempre.
 import { el } from './format.js';
 
 const $ = (id) => document.getElementById(id);
@@ -107,6 +107,7 @@ export function createLauncher({ api }) {
 
 /** Linha de ações do detalhe. `features()` são os Ajustes do último snapshot. */
 export function createDetailActions({ api, sessionId, launcher, features, onDone }) {
+  const watch = $('act-watch');
   const child = $('act-child');
   const archive = $('act-archive');
   const close = $('act-close');
@@ -127,6 +128,11 @@ export function createDetailActions({ api, sessionId, launcher, features, onDone
     }
   };
 
+  watch.addEventListener('click', () => {
+    if (!current) return;
+    if (current.watched) run('unwatch', '✓ Não é mais vigiada: esta sessão não manda Aviso.');
+    else run('watch', '✓ Vigiada: chega um Aviso quando ela terminar, der erro ou esperar você.');
+  });
   child.addEventListener('click', () => { if (current) launcher.open({ parent: current }); });
   archive.addEventListener('click', () => {
     if (!current) return;
@@ -144,10 +150,17 @@ export function createDetailActions({ api, sessionId, launcher, features, onDone
         disarmClose();
         disarmRemove();
       }
-      current = { ...current, ...data };
+      // `watched` só vem quando verdadeiro: sem ele, a sessão não é vigiada.
+      current = { ...current, ...data, watched: data.watched === true };
       const flags = features() ?? {};
       const local = !current.machine;
       const alive = current.status !== 'ended';
+      watch.hidden = !alive;
+      watch.textContent = current.watched ? 'parar de vigiar' : 'vigiar';
+      watch.setAttribute('aria-pressed', String(current.watched));
+      watch.title = current.watched
+        ? 'Para de mandar Aviso desta sessão'
+        : 'Manda um Aviso quando a sessão terminar, der erro ou esperar você';
       child.hidden = !(flags.launch && local && alive);
       close.hidden = !(flags.closeRemove && current.background && alive);
       remove.hidden = !(flags.closeRemove && current.background);
