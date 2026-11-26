@@ -12,6 +12,7 @@ module Erros {
     const RESPOSTA_GRANDE = -402;      // NETWORK_RESPONSE_TOO_LARGE
     const PRECISA_HTTPS = -1001;       // SECURE_CONNECTION_REQUIRED
     const TOKEN_INVALIDO = 401;
+    const NAO_ENCONTRADA = 404;        // vigiar uma sessão que o painel já encerrou
 
     // [título, dica] para mostrar, ou null quando não é erro (200).
     function mensagem(codigo as Number, demoraMs as Number) as Array<String> or Null {
@@ -28,6 +29,9 @@ module Erros {
         }
         if (codigo == TOKEN_INVALIDO) {
             return ["token inválido", "instale o app de novo"];
+        }
+        if (codigo == NAO_ENCONTRADA) {
+            return ["sessão encerrada", "volte à lista"];
         }
         if (codigo == RESPOSTA_GRANDE) {
             return ["resposta grande", "atualize o painel"];

@@ -8,17 +8,22 @@ import Toybox.WatchUi;
 // Estado do app: o último painel, o erro da última busca, a página, o cursor da lista e a sessão em detalhe.
 // Busca a cada 10 s e anima a 8 quadros por segundo, só com o app aberto.
 // Quando uma sessão passa a esperar você, o relógio vibra (o "plim-plim" do mostrador) e abre o detalhe dela.
+// No detalhe, o START liga ou desliga a vigia da sessão, com uma vibração curta quando o painel confirma.
 class Controle {
 
     const BUSCA_MS = 10000;
     const QUADRO_MS = 125;
     const PAGINAS = 3;
+    const ERRO_VIGIA_MS = 4000;
 
     var painel as Painel or Null = null;
     var erro as Array<String> or Null = null;
     var pagina as Number = 0;
     var cursor as Number = 0;
     var detalheId as String or Null = null;
+    // Sessão cuja vigia está a caminho do painel (uma por vez), e o erro da última tentativa.
+    var vigiaPendente as String or Null = null;
+    var erroVigia as String or Null = null;
 
     private var _client as PainelClient;
     private var _busca as Timer.Timer;
@@ -29,6 +34,10 @@ class Controle {
     private var _ultimoSegundo as Number = 0;
     private var _esperando as Dictionary<String, Boolean> = {} as Dictionary<String, Boolean>;
     private var _primeiraResposta as Boolean = true;
+    private var _vigiaInicioMs as Number = 0;
+    private var _erroVigiaAte as Number = 0;
+    // [id, vigiada, quando] da última vigia confirmada: uma lista pedida antes disso ainda vem sem ela.
+    private var _vigiaConfirmada as Array or Null = null;
 
     function initialize() {
         _client = new PainelClient();
@@ -86,6 +95,7 @@ class Controle {
             return;
         }
         var focada = sessaoNoCursor();
+        manterVigiaConfirmada(lido);
         painel = lido;
         erro = null;
         _ultimoSegundo = agora();
@@ -96,6 +106,64 @@ class Controle {
         }
         verPedidosNovos(lido);
         WatchUi.requestUpdate();
+    }
+
+    // A lista que saiu antes da vigia confirmada ainda não a conhece: vale a confirmada até chegar uma mais nova.
+    function manterVigiaConfirmada(lido as Painel) as Void {
+        var c = _vigiaConfirmada;
+        if (c == null) {
+            return;
+        }
+        if (_inicioMs - (c[2] as Number) >= 0) {
+            _vigiaConfirmada = null;
+            return;
+        }
+        lido.fixarVigia(c[0] as String, c[1] as Boolean);
+    }
+
+    // START no detalhe: pede ao painel para vigiar (ou parar) a sessão aberta. Um pedido por vez.
+    function alternarVigia() as Void {
+        var s = sessaoEmDetalhe();
+        if (s == null || vigiaPendente != null) {
+            return;
+        }
+        vigiaPendente = s.id;
+        erroVigia = null;
+        _vigiaInicioMs = agora();
+        _client.vigiar(s.id, !s.watched, method(:aoVigiar));
+        WatchUi.requestUpdate();
+    }
+
+    function aoVigiar(codigo as Number, data as Dictionary or String or PersistedContent.Iterator or Null) as Void {
+        var id = vigiaPendente;
+        vigiaPendente = null;
+        var vigiada = codigo == 200 ? Leitura.vigiada(data instanceof Dictionary ? data : null) : null;
+        if (id == null || vigiada == null) {
+            var msg = codigo == 200 ? ["resposta estranha", ""] : Erros.mensagem(codigo, agora() - _vigiaInicioMs);
+            erroVigia = msg == null ? "resposta estranha" : msg[0];
+            _erroVigiaAte = agora() + ERRO_VIGIA_MS;
+            WatchUi.requestUpdate();
+            return;
+        }
+        var p = painel;
+        if (p != null) {
+            p.fixarVigia(id, vigiada);
+        }
+        _vigiaConfirmada = [id, vigiada, agora()];
+        confirmar();
+        WatchUi.requestUpdate();
+    }
+
+    // O erro da vigia fica uns segundos na linha dela e some.
+    function erroVigiaAgora() as String or Null {
+        return erroVigia != null && _erroVigiaAte - agora() > 0 ? erroVigia : null;
+    }
+
+    // Vibração curta: a vigia mudou no painel (e em todas as Telas).
+    function confirmar() as Void {
+        if (Attention has :vibrate) {
+            Attention.vibrate([new Attention.VibeProfile(60, 90)] as Array<Attention.VibeProfile>);
+        }
     }
 
     // Pedido novo: vibra e abre a sessão, sem atropelar outro pedido que você está lendo.
@@ -198,6 +266,7 @@ class Controle {
             return;
         }
         detalheId = null;
+        erroVigia = null;
         WatchUi.popView(WatchUi.SLIDE_DOWN);
     }
 
@@ -215,6 +284,7 @@ class Controle {
         var i = p.posicaoDe(detalheId);
         var total = p.sessoes.size();
         detalheId = p.sessoes[((i < 0 ? 0 : i) + passo + total) % total].id;
+        erroVigia = null;
         WatchUi.requestUpdate();
         return true;
     }

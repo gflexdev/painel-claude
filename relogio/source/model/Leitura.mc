@@ -49,6 +49,7 @@ module Leitura {
         var s = new Sessao(id, texto(item.get("name")), texto(item.get("project")), status, numero(item.get("age"), 0));
         s.machine = texto(item.get("machine"));
         s.activity = texto(item.get("activity"));
+        s.watched = item.get("watched") == true;
         s.context = numero(item.get("context"), -1);
         s.model = texto(item.get("model"));
         s.turns = numero(item.get("turns"), -1);
@@ -60,6 +61,19 @@ module Leitura {
             s.askCount = numero(ask.get("count"), 1);
         }
         return s;
+    }
+
+    // Resposta de POST /api/sessions/:id/watch ou /unwatch: { success, data: { id, watched } }.
+    // true/false = como a sessão ficou; null = resposta sem o campo.
+    function vigiada(data as Dictionary or String or Null) as Boolean or Null {
+        if (!(data instanceof Dictionary)) {
+            return null;
+        }
+        var corpo = data.get("data");
+        if (!(corpo instanceof Dictionary) || !(corpo.get("watched") instanceof Boolean)) {
+            return null;
+        }
+        return corpo.get("watched") as Boolean;
     }
 
     function lerUso(valor) as Uso or Null {

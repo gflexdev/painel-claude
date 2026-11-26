@@ -52,6 +52,16 @@ class Painel {
         return i < 0 ? null : sessoes[i];
     }
 
+    // Põe a vigia que o painel acabou de confirmar (a lista em mãos pode ser de antes). false = não está na lista.
+    function fixarVigia(id as String, vigiada as Boolean) as Boolean {
+        var s = sessaoDe(id);
+        if (s == null) {
+            return false;
+        }
+        s.watched = vigiada;
+        return true;
+    }
+
     // A mais urgente (a primeira: o servidor manda na ordem da grade), ou null se não há nenhuma.
     function maisUrgente() as Sessao or Null {
         return sessoes.size() > 0 ? sessoes[0] : null;

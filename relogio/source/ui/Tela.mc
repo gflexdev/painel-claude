@@ -154,6 +154,18 @@ module Tela {
             Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 
+    // Marca de Sessão vigiada, o "◉" da web (que as fontes não têm): anel e miolo na cor da pergunta.
+    // (x, y) é o meio; r o raio de fora; fundo a cor por trás, que faz o vão entre o anel e o miolo.
+    function marcaVigia(dc as Graphics.Dc, x as Number, y as Number, r as Number, fundo as Number) as Void {
+        var anel = r / 3 > 1 ? r / 3 : 1;
+        dc.setColor(Cores.PERGUNTA, Graphics.COLOR_TRANSPARENT);
+        dc.fillCircle(x, y, r);
+        dc.setColor(fundo, Graphics.COLOR_TRANSPARENT);
+        dc.fillCircle(x, y, r - anel);
+        dc.setColor(Cores.PERGUNTA, Graphics.COLOR_TRANSPARENT);
+        dc.fillCircle(x, y, r - anel * 2 > 1 ? r - anel * 2 : 1);
+    }
+
     // Bolinhas embaixo: onde você está no carrossel.
     function bolinhas(dc as Graphics.Dc, total as Number, atual as Number) as Void {
         var y = dc.getHeight() - s(dc, 22);

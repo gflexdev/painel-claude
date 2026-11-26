@@ -100,3 +100,14 @@ function coresDasSituacoes(logger as Logger) as Boolean {
     Test.assertEqual(Cores.doUso(91, Cores.RODANDO), Cores.ESPERANDO);
     return true;
 }
+
+(:test)
+function linhaDaVigiaNoDetalhe(logger as Logger) as Boolean {
+    var s = new Sessao("x", "", "", "working", 0);
+    Test.assertEqual(Palavras.rotuloVigia(s, false), "START vigia");
+    Test.assertEqual(Palavras.rotuloVigia(s, true), "vigiando…");
+    s.watched = true;
+    Test.assertEqual(Palavras.rotuloVigia(s, false), "vigiada · START para");
+    Test.assertEqual(Palavras.rotuloVigia(s, true), "parando de vigiar…");
+    return true;
+}

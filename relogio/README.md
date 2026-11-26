@@ -2,7 +2,7 @@
 
 Watch-app Connect IQ com a cara e as visões do mostrador redondo (`firmware/src/round/`): as mesmas cores, as
 mesmas fontes (Space Grotesk e JetBrains Mono) e o Clawd com as mesmas poses. Mostra as sessões **em movimento**,
-até 8, na ordem de urgência da grade.
+até 8, na ordem de urgência da grade, e deixa vigiar cada uma.
 
 - **Três páginas**, trocadas deslizando para o lado ou com UP/DOWN (as bolinhas embaixo dizem onde você está):
   - **Visão geral**: o Mapa em órbita, com um Clawd por sessão e o Clawd grande no meio, na situação mais
@@ -15,10 +15,18 @@ até 8, na ordem de urgência da grade.
     zera.
 - **Detalhe**: o Clawd da sessão, o contexto no anel, os números (contexto, pedidos, aberta há quanto tempo) e o
   que ela está fazendo. UP/DOWN passa para a sessão vizinha; BACK (ou deslizar para baixo) volta.
+- **Vigiar**: no detalhe, o START vigia a sessão ou para de vigiar, e o relógio vibra curto quando o painel
+  confirma. A última linha diz como está ("START vigia" ou "◉ vigiada · START para") e, se não deu, o motivo
+  ("sem celular", "sessão encerrada"…). A vigia é uma só: aparece também no painel web e no celular, e a vigiada lá
+  aparece aqui. A **Sessão vigiada** leva o ◉ no fim do nome, na lista, e embaixo à direita do Clawd, na órbita.
+  Tocar na tela do detalhe não vigia, para não ligar sem querer. Na lista e na Visão geral, tocar ou o START
+  continuam abrindo o detalhe.
 - **Esperando você**: quando uma sessão passa a esperar você, o relógio vibra duas vezes (o "plim-plim" do
   mostrador) e abre a sessão sozinho, com a borda vermelha pulsando e o pedido ("PEDE PERMISSÃO · BASH"). Não há
-  Permitir nem Negar: o relógio só acompanha, e a decisão fica para o Mac ou o celular. Ao abrir o app, quem já
+  Permitir nem Negar: a decisão fica para o Mac ou o celular. Ao abrir o app, quem já
   esperava não vibra de novo. Com o app fechado, quem avisa é o Aviso do celular, que o Garmin repete no pulso.
+
+O relógio só vigia: não aprova permissões, não responde perguntas e não manda pedidos.
 
 O que fica de fora do mostrador: o brilho que escurece sozinho (o relógio cuida da tela) e os botões de decidir
 pedidos. O relógio nunca recebe o comando, o pedido nem trecho de resposta.
@@ -49,7 +57,8 @@ Para o Forerunner 165 Music, use `relogio/scripts/instalar.sh fr165m`. O cabeça
 ## Token do relógio
 
 O relógio tem um token só dele, separado do token das **Telas**. Ele vale só para a lista do relógio
-(`GET /api/watch`): em qualquer outra rota recebe 401.
+(`GET /api/watch`) e para vigiar e parar de vigiar (`POST /api/sessions/:id/watch` e `/unwatch`): em qualquer
+outra rota recebe 401.
 
 ```bash
 node scripts/relogio.js token     # gera (se não houver) e reinicia o painel
@@ -67,6 +76,7 @@ compila com ele.
 | painel não respondeu | `-300` demorado: o Mac está desligado ou o painel caiu |
 | sem celular | `-104`: o relógio não está conectado ao celular |
 | token inválido | 401: o token foi revogado ou trocado. Instale o app de novo |
+| sessão encerrada | 404 ao vigiar: a sessão acabou antes do pedido chegar ao painel |
 | resposta grande | `-402`: a resposta passou do limite do 165 (~27 kB) |
 | precisa de https | `-1001`: o endereço compilado não é https |
 
@@ -81,14 +91,14 @@ relogio/scripts/run-sim.sh              # compila e abre no simulador, contra o 
 relogio/scripts/screenshot-sim.sh       # captura a janela do simulador em relogio/bin/simulador.png
 ```
 
-- Lógica pura e testada: `source/model/` (`Leitura` lê a resposta, `Palavras` monta os textos, `Cores` traz a
+- Lógica pura e testada: `source/model/` (`Leitura` lê as respostas, `Palavras` monta os textos, `Cores` traz a
   paleta do mostrador, `Erros` dá nome aos erros) e `source/clawd/Clawd.mc` (porte de
   `firmware/src/app/clawd.cpp`: as poses quadro a quadro). As telas ficam em `source/ui/`, com as medidas do
   mostrador (466 px) levadas à tela de 390 px por `Tela.s`.
 - Fontes: `relogio/tools/gerar-fontes.sh` baixa as mesmas do firmware e gera os BMFont de `resources/fonts/`
   (precisa do `uv`). Os tamanhos são maiores que a conta direta, porque a tela do 165 é fisicamente menor.
 - O app anima a 8 quadros por segundo e busca a lista a cada 10 s, só enquanto está aberto.
-- No `BehaviorDelegate`, o comportamento vem antes do evento bruto: a Visão geral e a lista devolvem `false` em
+- No `BehaviorDelegate`, o comportamento vem antes do evento bruto: a Visão geral, a lista e o detalhe devolvem `false` em
   `onSelect` para o START chegar em `onKey` e o toque em `onTap`, com as coordenadas.
 - `PAINEL_URL=https://…` no `build.sh` troca o endereço. O simulador também recusa `http` (`-1001`). Para testar um
   painel de outro branch, suba-o numa porta livre, com uma cópia dos dados (`PAINEL_DIR`), e publique-o pela

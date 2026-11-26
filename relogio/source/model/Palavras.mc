@@ -181,6 +181,14 @@ module Palavras {
         return linha;
     }
 
+    // Linha da vigia no detalhe: o que o START faz agora, ou que o pedido está a caminho.
+    function rotuloVigia(s as Sessao, pendente as Boolean) as String {
+        if (pendente) {
+            return s.watched ? "parando de vigiar…" : "vigiando…";
+        }
+        return s.watched ? "vigiada · START para" : "START vigia";
+    }
+
     // Título do cartão de quem espera você: "PEDE PERMISSÃO · BASH", "PLANO PARA APROVAR"…
     function tituloPedido(s as Sessao) as String {
         if (s.askKind.equals("plan")) {
